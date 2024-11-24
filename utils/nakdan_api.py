@@ -1,11 +1,16 @@
-import json
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import httpx
 import logging
+from attrs import define
 
 logger = logging.getLogger(__name__)
 
-def get_nikud(text: str) -> str:
+@define
+class NakdanResponse:
+    text: str
+    error: Optional[str] = None
+
+def get_nikud(text: str) -> NakdanResponse:
     """
     Sends Hebrew text to the Nakdan API and returns it with niqqud.
     """
@@ -26,11 +31,13 @@ def get_nikud(text: str) -> str:
 
         # Extract the vowelized text from the response
         words = [w['options'][0] if w['options'] else w['word'] for w in data]
-        return "".join(words)
+        return NakdanResponse(text="".join(words))
 
     except httpx.HTTPError as e:
+        error_msg = "An error occurred while connecting to the service."
         logger.error("HTTP error occurred while calling Nakdan API: %s", e)
-        return "An error occurred while connecting to the service."
+        return NakdanResponse(text="", error=error_msg)
     except Exception as e:
+        error_msg = "An error occurred while processing the text."
         logger.error("Error processing text with Nakdan API: %s", e)
-        return "An error occurred while processing the text."
+        return NakdanResponse(text="", error=error_msg)

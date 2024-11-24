@@ -37,12 +37,14 @@ async def vowelize(ctx: Context, *, text: str) -> None:
     await ctx.send("Processing your text... 🔄")
 
     # Get niqqud text using the Nakdan API
-    vowelized_text = get_nikud(text)
+    result = get_nikud(text)
 
-    if "error" in vowelized_text.lower():
-        await ctx.send("Sorry, there was an issue processing your text.")
-    else:
-        await ctx.send(f"Here is your vowelized text:\n```\n{vowelized_text}\n```")
+    if result.error:
+        logger.error("Failed to vowelize text: %s", result.error)
+        await ctx.send(f"Sorry, there was an issue processing your text: {result.error}")
+        return
+
+    await ctx.send(f"Here is your vowelized text:\n```\n{result.text}\n```")
 
 # Run the bot
 try:
