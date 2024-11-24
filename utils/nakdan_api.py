@@ -65,22 +65,36 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
         pos_tags = []
         word_analysis = []
         for word_data in data:
-            if word_data['options']:
-                option = word_data['options'][0]
-                words.append(option['word'])
-                lemmas.append(option.get('lemma', ''))
-                pos_tags.append(option.get('partOfSpeech', ''))
-                word_analysis.append({
-                    'word': option['word'],
-                    'lemma': option.get('lemma', ''),
-                    'pos': option.get('partOfSpeech', ''),
-                    'gender': option.get('gender', ''),
-                    'number': option.get('number', ''),
-                    'person': option.get('person', ''),
-                    'tense': option.get('tense', '')
-                })
+            options = word_data.get('options', [])
+            if options:
+                try:
+                    option = options[0]
+                    word = option.get('word')
+                    if not word:
+                        logger.error("Missing required 'word' field in API response option: %s", option)
+                        raise KeyError("Missing required 'word' field in API response")
+                        
+                    words.append(word)
+                    lemmas.append(option.get('lemma', ''))
+                    pos_tags.append(option.get('partOfSpeech', ''))
+                    word_analysis.append({
+                        'word': word,
+                        'lemma': option.get('lemma', ''),
+                        'pos': option.get('partOfSpeech', ''),
+                        'gender': option.get('gender', ''),
+                        'number': option.get('number', ''),
+                        'person': option.get('person', ''),
+                        'tense': option.get('tense', '')
+                    })
+                except (KeyError, IndexError) as e:
+                    logger.error("Failed to parse API response option: %s. Error: %s", option, str(e))
+                    raise
             else:
-                words.append(word_data['word'])
+                word = word_data.get('word')
+                if not word:
+                    logger.error("Missing required 'word' field in API response data: %s", word_data)
+                    raise KeyError("Missing required 'word' field in API response")
+                words.append(word)
                 lemmas.append('')
                 pos_tags.append('')
                 word_analysis.append({})
@@ -93,10 +107,14 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
         )
 
     except httpx.HTTPError as e:
-        error_msg = "An error occurred while connecting to the service."
-        logger.error("HTTP error occurred while calling Nakdan API: %s", e)
+        error_msg = f"Connection error: {str(e)}"
+        logger.error("HTTP error occurred while calling Nakdan API: %s", str(e), exc_info=True)
+        return NakdanResponse(text="", error=error_msg)
+    except KeyError as e:
+        error_msg = f"Invalid API response format: {str(e)}"
+        logger.error("Failed to parse Nakdan API response: %s", str(e), exc_info=True)
         return NakdanResponse(text="", error=error_msg)
     except Exception as e:
-        error_msg = "An error occurred while processing the text."
-        logger.error("Error processing text with Nakdan API: %s", e)
+        error_msg = f"Processing error: {str(e)}"
+        logger.error("Error processing text with Nakdan API: %s", str(e), exc_info=True)
         return NakdanResponse(text="", error=error_msg)
