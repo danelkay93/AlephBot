@@ -1,7 +1,9 @@
 from typing import Dict, List, Any, Optional
+import re
 import httpx
 import logging
 from attrs import define
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +12,16 @@ class NakdanResponse:
     text: str
     error: Optional[str] = None
 
-def get_nikud(text: str, timeout: float = 10.0) -> NakdanResponse:
+def is_hebrew(text: str) -> bool:
+    """Check if string contains Hebrew characters."""
+    hebrew_pattern = re.compile(r'[\u0590-\u05FF\uFB1D-\uFB4F]')
+    return bool(hebrew_pattern.search(text))
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10)
+)
+def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> NakdanResponse:
     """
     Sends Hebrew text to the Nakdan API and returns it with niqqud.
     
@@ -22,6 +33,14 @@ def get_nikud(text: str, timeout: float = 10.0) -> NakdanResponse:
         NakdanResponse containing either the processed text or error message
     """
     try:
+        if not text.strip():
+            return NakdanResponse(text="", error="Text cannot be empty")
+        
+        if len(text) > max_length:
+            return NakdanResponse(text="", error=f"Text exceeds maximum length of {max_length} characters")
+            
+        if not is_hebrew(text):
+            return NakdanResponse(text="", error="Text must contain Hebrew characters")
         url = "https://nakdan-5-1.loadbalancer.dicta.org.il/api"
         payload: Dict[str, str] = {
             "data": text,

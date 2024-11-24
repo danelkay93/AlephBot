@@ -31,11 +31,23 @@ async def vowelize(ctx: Context, *, text: str) -> None:
     """
     Adds niqqud to the provided Hebrew text using the Nakdan API.
     """
-    if not text.strip():
-        await ctx.send("Please provide some Hebrew text to vowelize. Example: `!vowelize שלום עולם`")
-        return
-
     processing_msg = await ctx.send("Processing your text... 🔄")
+
+    # Get niqqud text using the Nakdan API
+    result = get_nikud(text, max_length=500)
+
+    if result.error:
+        await processing_msg.delete()
+        if "maximum length" in result.error:
+            await ctx.send("❌ Text is too long! Please keep it under 500 characters.")
+        elif "must contain Hebrew" in result.error:
+            await ctx.send("❌ Please provide Hebrew text to vowelize. Example: `!vowelize שלום עולם`")
+        elif "empty" in result.error:
+            await ctx.send("❌ Please provide some text to vowelize. Example: `!vowelize שלום עולם`")
+        else:
+            logger.error("Failed to vowelize text: %s", result.error)
+            await ctx.send(f"❌ Sorry, there was an issue processing your text: {result.error}")
+        return
 
     # Get niqqud text using the Nakdan API
     result = get_nikud(text)
