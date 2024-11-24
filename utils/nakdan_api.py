@@ -1,28 +1,36 @@
-import http.client
 import json
+from typing import Dict, List, Any
+import httpx
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_nikud(text: str) -> str:
     """
     Sends Hebrew text to the Nakdan API and returns it with niqqud.
     """
     try:
-        connection = http.client.HTTPSConnection("nakdan-5-1.loadbalancer.dicta.org.il")
-        payload = json.dumps({
+        url = "https://nakdan-5-1.loadbalancer.dicta.org.il/api"
+        payload: Dict[str, str] = {
             "data": text,
             "genre": "modern"  # Options: 'modern', 'poetry', etc.
-        })
-        headers = {
+        }
+        headers: Dict[str, str] = {
             'Content-Type': 'application/json'
         }
-        connection.request("POST", "/api", payload, headers)
-        response = connection.getresponse()
-        data = json.loads(response.read().decode("utf-8"))
-        connection.close()
+        
+        with httpx.Client() as client:
+            response = client.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            data: List[Dict[str, Any]] = response.json()
 
         # Extract the vowelized text from the response
-        words = map(lambda w: w['options'][0] if len(w['options']) > 0 else w['word'], data)
+        words = [w['options'][0] if w['options'] else w['word'] for w in data]
         return "".join(words)
 
+    except httpx.HTTPError as e:
+        logger.error(f"HTTP error occurred while calling Nakdan API: {e}")
+        return "An error occurred while connecting to the service."
     except Exception as e:
-        print(f"Error interacting with Nakdan API: {e}")
+        logger.error(f"Error processing text with Nakdan API: {e}")
         return "An error occurred while processing the text."
