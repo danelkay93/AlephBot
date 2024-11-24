@@ -1,9 +1,12 @@
-import os
 import logging
 from pathlib import Path
+from typing import Optional
+
 import discord
 from discord.ext import commands
-from dotenv import load_dotenv
+from discord.ext.commands import Context
+
+from utils.config import settings
 from utils.nakdan_api import get_nikud
 
 # Set up logging
@@ -12,9 +15,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-# Load environment variables
-load_dotenv('tokens.env')
 
 # Initialize bot
 intents = discord.Intents.default()
@@ -26,7 +26,7 @@ async def on_ready():
     logger.info('Bot %s is now online!', bot.user)
 
 @bot.command(name='vowelize')
-async def vowelize(ctx, *, text: str):
+async def vowelize(ctx: Context, *, text: str) -> None:
     """
     Adds niqqud to the provided Hebrew text using the Nakdan API.
     """
@@ -45,9 +45,8 @@ async def vowelize(ctx, *, text: str):
         await ctx.send(f"Here is your vowelized text:\n```\n{vowelized_text}\n```")
 
 # Run the bot
-token = os.getenv('DISCORD_TOKEN')
-if not token:
-    logger.error('Discord token not found in environment variables')
-    raise ValueError('Discord token not found')
-
-bot.run(token)
+try:
+    bot.run(settings.discord_token)
+except discord.LoginFailure as e:
+    logger.error("Failed to login to Discord: %s", e)
+    raise
