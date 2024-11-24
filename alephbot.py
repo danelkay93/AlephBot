@@ -1,6 +1,20 @@
+import os
+import logging
+from pathlib import Path
 import discord
 from discord.ext import commands
+from dotenv import load_dotenv
 from utils.nakdan_api import get_nikud
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Load environment variables
+load_dotenv()
 
 # Initialize bot
 intents = discord.Intents.default()
@@ -9,7 +23,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f'{bot.user} is now online!')
+    logger.info('Bot %s is now online!', bot.user)
 
 @bot.command(name='vowelize')
 async def vowelize(ctx, *, text: str):
@@ -31,4 +45,9 @@ async def vowelize(ctx, *, text: str):
         await ctx.send(f"Here is your vowelized text:\n```\n{vowelized_text}\n```")
 
 # Run the bot
-bot.run('MTMxMDEyMTIwMjUzODM4NTQwOA.GK4PSu.ExHBBxx3xfWjUPyFGpnXr1e7keDcHL7BRuG-QA')
+token = os.getenv('DISCORD_TOKEN')
+if not token:
+    logger.error('Discord token not found in environment variables')
+    raise ValueError('Discord token not found')
+
+bot.run(token)
