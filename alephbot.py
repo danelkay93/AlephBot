@@ -4,6 +4,7 @@ from pathlib import Path
 import discord
 from discord.ext import commands
 from discord.ext.commands import Context
+from discord import Embed, Color
 
 from utils.config import settings
 from utils.nakdan_api import get_nikud
@@ -57,26 +58,67 @@ async def vowelize(ctx: Context, *, text: str) -> None:
         return
 
     await processing_msg.delete()
-    # Format the response with vowelized text and analysis
-    response = [f"Vowelized text:\n```\n{result.text}\n```"]
-    
+    # Create an embed for the response
+    embed = Embed(
+        title="Hebrew Text Analysis",
+        color=Color.blue(),
+        description=f"**Original Text:**\n{text}\n\n**Vowelized Text:**\n{result.text}"
+    )
+
     # Add word analysis if available
     if result.word_analysis:
-        analysis = []
-        for word in result.word_analysis:
+        detailed_analysis = ""
+        for i, word in enumerate(result.word_analysis, 1):
             if word:
-                info = [f"Word: {word['word']}"]
-                if word['lemma']: info.append(f"Lemma: {word['lemma']}")
-                if word['pos']: info.append(f"POS: {word['pos']}")
-                if any(word[k] for k in ['gender', 'number', 'person', 'tense']):
-                    details = [f"{k}: {word[k]}" for k in ['gender', 'number', 'person', 'tense'] if word[k]]
-                    info.append(" | ".join(details))
-                analysis.append(" - " + " | ".join(info))
+                analysis_parts = []
+                if word['lemma']: analysis_parts.append(f"📚 Root: `{word['lemma']}`")
+                if word['pos']: analysis_parts.append(f"🏷️ POS: `{word['pos']}`")
+                
+                grammar_parts = []
+                if word['gender']: grammar_parts.append(f"Gender: {word['gender']}")
+                if word['number']: grammar_parts.append(f"Number: {word['number']}")
+                if word['person']: grammar_parts.append(f"Person: {word['person']}")
+                if word['tense']: grammar_parts.append(f"Tense: {word['tense']}")
+                
+                if grammar_parts:
+                    analysis_parts.append(f"📝 Grammar: `{' | '.join(grammar_parts)}`")
+                
+                word_section = f"**{i}. {word['word']}**\n" + "\n".join(analysis_parts)
+                detailed_analysis += word_section + "\n\n"
         
-        if analysis:
-            response.append("\nWord Analysis:\n```\n" + "\n".join(analysis) + "\n```")
-    
-    await ctx.send("\n".join(response))
+        if len(detailed_analysis) > 1024:
+            # Split into multiple fields if too long
+            parts = detailed_analysis.split("\n\n")
+            current_field = ""
+            field_num = 1
+            
+            for part in parts:
+                if len(current_field) + len(part) > 1024:
+                    embed.add_field(
+                        name=f"Word Analysis (Part {field_num})",
+                        value=current_field.strip(),
+                        inline=False
+                    )
+                    current_field = part + "\n\n"
+                    field_num += 1
+                else:
+                    current_field += part + "\n\n"
+            
+            if current_field:
+                embed.add_field(
+                    name=f"Word Analysis (Part {field_num})",
+                    value=current_field.strip(),
+                    inline=False
+                )
+        else:
+            embed.add_field(
+                name="Word Analysis",
+                value=detailed_analysis.strip(),
+                inline=False
+            )
+
+    embed.set_footer(text="Powered by Nakdan API • Use !help for more commands")
+    await ctx.send(embed=embed)
 
 @vowelize.error
 async def vowelize_error(ctx: Context, error: Exception | None) -> None:
@@ -112,26 +154,40 @@ async def analyze(ctx: Context, *, text: str) -> None:
 
     await processing_msg.delete()
     
-    # Create detailed morphological analysis response
-    response = ["Morphological Analysis:"]
-    for i, analysis in enumerate(result.word_analysis):
+    # Create an embed for morphological analysis
+    embed = Embed(
+        title="Detailed Morphological Analysis",
+        color=Color.green(),
+        description=f"Analyzing text: {text}"
+    )
+
+    for i, analysis in enumerate(result.word_analysis, 1):
         if analysis:
-            response.append(f"\nWord {i+1}:")
-            response.append(f"  Original: {analysis['word']}")
-            if analysis['lemma']: response.append(f"  Root/Lemma: {analysis['lemma']}")
-            if analysis['pos']: response.append(f"  Part of Speech: {analysis['pos']}")
+            field_content = []
+            field_content.append(f"**Original Word:** {analysis['word']}")
             
-            details = []
-            if analysis['gender']: details.append(f"Gender: {analysis['gender']}")
-            if analysis['number']: details.append(f"Number: {analysis['number']}")
-            if analysis['person']: details.append(f"Person: {analysis['person']}")
-            if analysis['tense']: details.append(f"Tense: {analysis['tense']}")
+            if analysis['lemma']: 
+                field_content.append(f"📚 **Root/Lemma:** `{analysis['lemma']}`")
+            if analysis['pos']: 
+                field_content.append(f"🏷️ **Part of Speech:** `{analysis['pos']}`")
             
-            if details:
-                response.append("  Grammar: " + " | ".join(details))
-    
-    # Send the analysis in a code block
-    await ctx.send("```\n" + "\n".join(response) + "\n```")
+            grammar_info = []
+            if analysis['gender']: grammar_info.append(f"Gender: {analysis['gender']}")
+            if analysis['number']: grammar_info.append(f"Number: {analysis['number']}")
+            if analysis['person']: grammar_info.append(f"Person: {analysis['person']}")
+            if analysis['tense']: grammar_info.append(f"Tense: {analysis['tense']}")
+            
+            if grammar_info:
+                field_content.append(f"📝 **Grammar:**\n`{' | '.join(grammar_info)}`")
+
+            embed.add_field(
+                name=f"Word {i}",
+                value="\n".join(field_content),
+                inline=False
+            )
+
+    embed.set_footer(text="🔍 Morphological analysis powered by Nakdan API")
+    await ctx.send(embed=embed)
 
 @analyze.error
 async def analyze_error(ctx: Context, error: Exception | None) -> None:
