@@ -29,8 +29,8 @@ def get_nikud(text: str) -> str:
         return "".join(words)
 
     except httpx.HTTPError as e:
-        logger.error(f"HTTP error occurred while calling Nakdan API: {e}")
+        logger.error("HTTP error occurred while calling Nakdan API: %s", e)
         return "An error occurred while connecting to the service."
     except Exception as e:
-        logger.error(f"Error processing text with Nakdan API: {e}")
+        logger.error("Error processing text with Nakdan API: %s", e)
         return "An error occurred while processing the text."
