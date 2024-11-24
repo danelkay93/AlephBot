@@ -64,7 +64,6 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
         lemmas = []
         pos_tags = []
         word_analysis = []
-        
         for word_data in data:
             if word_data['options']:
                 option = word_data['options'][0]
