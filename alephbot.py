@@ -26,6 +26,7 @@ async def on_ready():
     logger.info('Bot %s is now online!', bot.user)
 
 @bot.command(name='vowelize')
+@commands.cooldown(1, 30, commands.BucketType.user)  # One use per 30 seconds per user
 async def vowelize(ctx: Context, *, text: str) -> None:
     """
     Adds niqqud to the provided Hebrew text using the Nakdan API.
@@ -34,7 +35,7 @@ async def vowelize(ctx: Context, *, text: str) -> None:
         await ctx.send("Please provide some Hebrew text to vowelize. Example: `!vowelize שלום עולם`")
         return
 
-    await ctx.send("Processing your text... 🔄")
+    processing_msg = await ctx.send("Processing your text... 🔄")
 
     # Get niqqud text using the Nakdan API
     result = get_nikud(text)
@@ -44,7 +45,17 @@ async def vowelize(ctx: Context, *, text: str) -> None:
         await ctx.send(f"Sorry, there was an issue processing your text: {result.error}")
         return
 
+    await processing_msg.delete()
     await ctx.send(f"Here is your vowelized text:\n```\n{result.text}\n```")
+
+@vowelize.error
+async def vowelize_error(ctx: Context, error: Exception) -> None:
+    """Handle errors in the vowelize command"""
+    if isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(f"Please wait {error.retry_after:.1f} seconds before using this command again.")
+    else:
+        logger.error("Unexpected error in vowelize command: %s", error)
+        await ctx.send("An unexpected error occurred. Please try again later.")
 
 # Run the bot
 try:

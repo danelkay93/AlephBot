@@ -10,9 +10,16 @@ class NakdanResponse:
     text: str
     error: Optional[str] = None
 
-def get_nikud(text: str) -> NakdanResponse:
+def get_nikud(text: str, timeout: float = 10.0) -> NakdanResponse:
     """
     Sends Hebrew text to the Nakdan API and returns it with niqqud.
+    
+    Args:
+        text: The Hebrew text to process
+        timeout: Maximum time in seconds to wait for API response
+        
+    Returns:
+        NakdanResponse containing either the processed text or error message
     """
     try:
         url = "https://nakdan-5-1.loadbalancer.dicta.org.il/api"
@@ -24,7 +31,7 @@ def get_nikud(text: str) -> NakdanResponse:
             'Content-Type': 'application/json'
         }
         
-        with httpx.Client() as client:
+        with httpx.Client(timeout=timeout) as client:
             response = client.post(url, json=payload, headers=headers)
             response.raise_for_status()
             data: List[Dict[str, Any]] = response.json()
