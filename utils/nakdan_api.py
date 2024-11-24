@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Optional
+from typing import Any, Optional
 import re
 import httpx
 import logging
@@ -42,18 +42,18 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
         if not is_hebrew(text):
             return NakdanResponse(text="", error="Text must contain Hebrew characters")
         url = "https://nakdan-5-1.loadbalancer.dicta.org.il/api"
-        payload: Dict[str, str] = {
+        payload: dict[str, str] = {
             "data": text,
             "genre": "modern"  # Options: 'modern', 'poetry', etc.
         }
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             'Content-Type': 'application/json'
         }
         
         with httpx.Client(timeout=timeout) as client:
             response = client.post(url, json=payload, headers=headers)
             response.raise_for_status()
-            data: List[Dict[str, Any]] = response.json()
+            data: list[dict[str, Any]] = response.json()
 
         # Extract the vowelized text from the response
         words = [w['options'][0] if w['options'] else w['word'] for w in data]
