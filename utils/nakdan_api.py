@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 class NakdanResponse:
     text: str
     error: str | None = None
+    lemmas: list[str] = []
+    pos_tags: list[str] = []
+    word_analysis: list[dict[str, Any]] = []
 
 def is_hebrew(text: str) -> bool:
     """Check if string contains Hebrew characters."""
@@ -41,7 +44,8 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
             
         if not is_hebrew(text):
             return NakdanResponse(text="", error="Text must contain Hebrew characters")
-        url = "https://nakdan-5-1.loadbalancer.dicta.org.il/api"
+        BASE_URL = "https://nakdan-5-1.loadbalancer.dicta.org.il"
+        url = f"{BASE_URL}/api"
         payload: dict[str, str] = {
             "data": text,
             "genre": "modern"  # Options: 'modern', 'poetry', etc.
@@ -55,9 +59,39 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
             response.raise_for_status()
             data: list[dict[str, Any]] = response.json()
 
-        # Extract the vowelized text from the response
-        words = [w['options'][0] if w['options'] else w['word'] for w in data]
-        return NakdanResponse(text="".join(words))
+        # Extract the vowelized text and analysis from the response
+        words = []
+        lemmas = []
+        pos_tags = []
+        word_analysis = []
+        
+        for word_data in data:
+            if word_data['options']:
+                option = word_data['options'][0]
+                words.append(option['word'])
+                lemmas.append(option.get('lemma', ''))
+                pos_tags.append(option.get('partOfSpeech', ''))
+                word_analysis.append({
+                    'word': option['word'],
+                    'lemma': option.get('lemma', ''),
+                    'pos': option.get('partOfSpeech', ''),
+                    'gender': option.get('gender', ''),
+                    'number': option.get('number', ''),
+                    'person': option.get('person', ''),
+                    'tense': option.get('tense', '')
+                })
+            else:
+                words.append(word_data['word'])
+                lemmas.append('')
+                pos_tags.append('')
+                word_analysis.append({})
+
+        return NakdanResponse(
+            text="".join(words),
+            lemmas=lemmas,
+            pos_tags=pos_tags,
+            word_analysis=word_analysis
+        )
 
     except httpx.HTTPError as e:
         error_msg = "An error occurred while connecting to the service."
