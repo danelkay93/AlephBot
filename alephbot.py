@@ -14,7 +14,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Load environment variables
-load_dotenv()
+load_dotenv('tokens.env')
 
 # Initialize bot
 intents = discord.Intents.default()
