@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import Optional
 
 import discord
 from discord.ext import commands
@@ -61,7 +60,7 @@ async def vowelize(ctx: Context, *, text: str) -> None:
     await ctx.send(f"Here is your vowelized text:\n```\n{result.text}\n```")
 
 @vowelize.error
-async def vowelize_error(ctx: Context, error: Exception) -> None:
+async def vowelize_error(ctx: Context, error: Exception | None) -> None:
     """Handle errors in the vowelize command"""
     if isinstance(error, commands.CommandOnCooldown):
         await ctx.send(f"Please wait {error.retry_after:.1f} seconds before using this command again.")

@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 import re
 import httpx
 import logging
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 @define
 class NakdanResponse:
     text: str
-    error: Optional[str] = None
+    error: str | None = None
 
 def is_hebrew(text: str) -> bool:
     """Check if string contains Hebrew characters."""
