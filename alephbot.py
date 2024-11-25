@@ -143,6 +143,32 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
     await interaction.followup.send(embed=embed)
 
 @analyze.error
+@bot.tree.command(name='test-niqqud', description="Test different Discord formatting for Hebrew niqqud")
+async def test_niqqud(interaction: discord.Interaction) -> None:
+    """
+    Tests different Discord formatting options for Hebrew text with niqqud.
+    """
+    test_word = "שָׁלוֹם"
+    embed = Embed(
+        title="Hebrew Niqqud Display Test",
+        color=Color.gold(),
+        description=(
+            "Testing different Discord formatting options for Hebrew text with niqqud:\n\n"
+            f"1. Plain text:\n{test_word}\n\n"
+            f"2. Single backticks:\n`{test_word}`\n\n"
+            f"3. Triple backticks:\n```{test_word}```\n\n"
+            f"4. Bold:\n**{test_word}**\n\n"
+            f"5. Italic:\n*{test_word}*\n\n"
+            f"6. Bold + Italic:\n***{test_word}***\n\n"
+            f"7. Underline:\n__{test_word}__\n\n"
+            f"8. Spoiler:\n||{test_word}||\n\n"
+            f"9. Quote:\n> {test_word}\n\n"
+            f"10. Code block with language:\n```hebrew\n{test_word}\n```"
+        )
+    )
+    embed.set_footer(text="Compare which formatting preserves niqqud marks best")
+    await interaction.response.send_message(embed=embed)
+
 @bot.tree.command(name='vowelize-help', description="Get help with viewing vowelized Hebrew text")
 async def vowelize_help(interaction: discord.Interaction) -> None:
     """
