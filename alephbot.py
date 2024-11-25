@@ -67,7 +67,10 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
             f"➖➖➖➖➖\n"
             f"**Vowelized Text (נִקּוּד):**\n"
             f"`{result.text}`\n"  # Single backtick for inline code
-            f"*Note: If you don't see the vowel marks, please check your font settings*"
+            f"*Note: To see vowel marks properly:*\n"
+            f"• *Use a font that supports Hebrew niqqud (like Segoe UI, Arial, Times New Roman)*\n"
+            f"• *In Discord Settings → Appearance → Chat Font, select a compatible font*\n"
+            f"• *Make sure your system's Hebrew language support is installed*"
         )
     )
 
