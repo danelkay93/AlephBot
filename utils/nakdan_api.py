@@ -190,12 +190,13 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
                 else:
                     options = word_data.get('options', [])
                     if options:  # Take first (most likely) option
-                        vowelized_word = options[0]
+                        vowelized_word = options[0]  # First option is most likely
                         words.append(vowelized_word)
                         lemmas.append('')  # We don't get lemma in this format
                         pos_tags.append('')  # We don't get POS in this format
                         word_analysis.append({
                             'word': vowelized_word,
+                            'vowelized': vowelized_word,  # Store vowelized version
                             'options': options  # Store all options for reference
                         })
                     else:

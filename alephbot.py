@@ -62,7 +62,7 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
     embed = Embed(
         title="Hebrew Text Analysis",
         color=Color.blue(),
-        description=f"**Original Text:**\n{text}\n\n**Vowelized Text:**\n{result.text}"
+        description=f"**Original Text:**\n{text}\n\n**Vowelized Text:**\n{' '.join(word['vowelized'] for word in result.word_analysis if word.get('vowelized'))}"
     )
 
     # Add word analysis if available
