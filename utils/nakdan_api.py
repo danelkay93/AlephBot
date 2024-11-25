@@ -182,28 +182,27 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
         
         for word_data in data:
             if isinstance(word_data, dict):
-                options = word_data.get('options', [])
-                if options and isinstance(options[0], dict):
-                    option = options[0]
-                    word = option.get('word', '')
-                    words.append(word)
-                    lemmas.append(option.get('lemma', ''))
-                    pos_tags.append(option.get('partOfSpeech', ''))
-                    word_analysis.append({
-                        'word': word,
-                        'lemma': option.get('lemma', ''),
-                        'pos': option.get('partOfSpeech', ''),
-                        'gender': option.get('gender', ''),
-                        'number': option.get('number', ''),
-                        'person': option.get('person', ''),
-                        'tense': option.get('tense', '')
-                    })
-                else:
-                    word = word_data.get('word', '')
-                    words.append(word)
+                if word_data.get('sep'):  # Handle separators (spaces)
+                    words.append(word_data['word'])
                     lemmas.append('')
                     pos_tags.append('')
                     word_analysis.append({})
+                else:
+                    options = word_data.get('options', [])
+                    if options:  # Take first (most likely) option
+                        vowelized_word = options[0]
+                        words.append(vowelized_word)
+                        lemmas.append('')  # We don't get lemma in this format
+                        pos_tags.append('')  # We don't get POS in this format
+                        word_analysis.append({
+                            'word': vowelized_word,
+                            'options': options  # Store all options for reference
+                        })
+                    else:
+                        words.append(word_data['word'])
+                        lemmas.append('')
+                        pos_tags.append('')
+                        word_analysis.append({})
             else:
                 words.append(str(word_data))
                 lemmas.append('')
