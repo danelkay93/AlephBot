@@ -66,7 +66,7 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
         f"**נוסח המקור | Original Text:**\n```{text}```\n"
         f"➖➖➖➖➖\n"
         f"**הַנּוֹסֵחַ הַמְּנֻוקָּד | Vowelized Text:**\n"
-        f"`{result.text}`\n"  # Single backtick for inline code
+        f"```\n{result.text}\n```\n"  # Triple backticks for code block with padding
         f"*Use `/vowelize-help` for display troubleshooting*"
     )
     logger.debug("Creating embed with description components:")
