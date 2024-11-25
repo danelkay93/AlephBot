@@ -65,7 +65,7 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
     description = (
         f"**נוסח המקור | Original Text:**\n```{text}```\n"
         f"➖➖➖➖➖\n"
-        f"**הנוסח המנוקד | Vowelized Text:**\n"
+        f"**הַנּוֹסֵחַ הַמְּנֻוקָּד | Vowelized Text:**\n"
         f"`{result.text}`\n"  # Single backtick for inline code
         f"*Use `/vowelize-help` for display troubleshooting*"
     )
