@@ -148,7 +148,7 @@ async def test_niqqud(interaction: discord.Interaction) -> None:
     """
     Comprehensive test of Hebrew text features including niqqud, gematria, and text analysis.
     """
-    from hebrew import Hebrew, gematria
+    from hebrew import Hebrew, gematria, GematriaTypes
 
     test_cases = [
         ("Basic Niqqud", Hebrew("שָׁלוֹם")),
@@ -173,7 +173,8 @@ async def test_niqqud(interaction: discord.Interaction) -> None:
             f"Without Niqqud: `{text.text_only().string}`",
             f"Letters Only: `{''.join(c for c in text if c.is_hebrew_letter)}`",
             f"Has Niqqud: `{any(c.is_hebrew_niqqud for c in text)}`",
-            f"Gematria: `{gematria.from_hebrew(text.text_only().string)}`",
+            f"Standard Gematria: `{text.gematria()}`",
+            f"Reduced Gematria: `{text.gematria(method=GematriaTypes.MISPAR_KATAN_MISPARI)}`",
             f"Graphemes: `{' | '.join(str(g) for g in text.graphemes)}`",
             f"Letter Count: `{sum(1 for c in text if c.is_hebrew_letter)}`",
             "➖➖➖"
