@@ -15,6 +15,65 @@ class NakdanResponse:
     pos_tags: list[str] = []
     word_analysis: list[dict[str, Any]] = []
 
+def analyze_text(text: str, timeout: float = 10.0, max_length: int = 500) -> NakdanResponse:
+    """
+    Analyzes Hebrew text and returns morphological information.
+    
+    Args:
+        text: The Hebrew text to analyze
+        timeout: Maximum time in seconds to wait for API response
+        max_length: Maximum allowed text length
+        
+    Returns:
+        NakdanResponse containing analysis results or error message
+    """
+    try:
+        if not text.strip():
+            return NakdanResponse(text="", error="Text cannot be empty")
+        
+        if len(text) > max_length:
+            return NakdanResponse(text="", error=f"Text exceeds maximum length of {max_length} characters")
+            
+        if not is_hebrew(text):
+            return NakdanResponse(text="", error="Text must contain Hebrew characters")
+
+        data = _call_nakdan_api(text, timeout)
+        
+        # Process API response for analysis
+        word_analysis = []
+        for word_data in data:
+            if isinstance(word_data, dict):
+                options = word_data.get('options', [])
+                if options and isinstance(options[0], dict):
+                    option = options[0]
+                    word_analysis.append({
+                        'word': option.get('word', ''),
+                        'lemma': option.get('lemma', ''),
+                        'pos': option.get('partOfSpeech', ''),
+                        'gender': option.get('gender', ''),
+                        'number': option.get('number', ''),
+                        'person': option.get('person', ''),
+                        'tense': option.get('tense', '')
+                    })
+                else:
+                    word_analysis.append({})
+            else:
+                word_analysis.append({})
+
+        return NakdanResponse(
+            text=text,
+            word_analysis=word_analysis
+        )
+
+    except httpx.HTTPError as e:
+        error_msg = f"Connection error: {str(e)}"
+        logger.error("HTTP error occurred while calling Nakdan API: %s", str(e), exc_info=True)
+        return NakdanResponse(text="", error=error_msg)
+    except Exception as e:
+        error_msg = f"Processing error: {str(e)}"
+        logger.error("Error analyzing text with Nakdan API: %s", str(e), exc_info=True)
+        return NakdanResponse(text="", error=error_msg)
+
 def is_hebrew(text: str) -> bool:
     """Check if string contains Hebrew characters."""
     hebrew_pattern = re.compile(r'[\u0590-\u05FF\uFB1D-\uFB4F]')
@@ -24,6 +83,35 @@ def is_hebrew(text: str) -> bool:
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=4, max=10)
 )
+def _call_nakdan_api(text: str, timeout: float = 10.0) -> list[dict[str, Any]]:
+    """
+    Makes the actual API call to Nakdan service.
+    
+    Args:
+        text: The Hebrew text to process
+        timeout: Maximum time in seconds to wait for API response
+        
+    Returns:
+        Raw API response data
+        
+    Raises:
+        httpx.HTTPError: If the API request fails
+    """
+    BASE_URL = "https://nakdan-5-1.loadbalancer.dicta.org.il"
+    url = f"{BASE_URL}/api"
+    payload: dict[str, str] = {
+        "data": text,
+        "genre": "modern"
+    }
+    headers: dict[str, str] = {
+        'Content-Type': 'application/json'
+    }
+    
+    with httpx.Client(timeout=timeout) as client:
+        response = client.post(url, json=payload, headers=headers)
+        response.raise_for_status()
+        return response.json()
+
 def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> NakdanResponse:
     """
     Sends Hebrew text to the Nakdan API and returns it with niqqud.
@@ -31,6 +119,7 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
     Args:
         text: The Hebrew text to process
         timeout: Maximum time in seconds to wait for API response
+        max_length: Maximum allowed text length
         
     Returns:
         NakdanResponse containing either the processed text or error message
@@ -54,10 +143,8 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
             'Content-Type': 'application/json'
         }
         
-        with httpx.Client(timeout=timeout) as client:
-            response = client.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-            data: list[dict[str, Any]] = response.json()
+        try:
+            data = _call_nakdan_api(text, timeout)
 
         # Split original text to preserve spaces
         original_words = text.split()

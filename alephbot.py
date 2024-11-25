@@ -37,8 +37,8 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
     """
     await interaction.response.defer()
 
-    # Get niqqud text using the Nakdan API
-    result = get_nikud(text, max_length=500)
+    # Get vowelized text using the Nakdan API
+    result = analyze_text(text, max_length=500)
 
     if result.error:
         error_message = "❌ "
