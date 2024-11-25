@@ -143,6 +143,14 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
     await interaction.followup.send(embed=embed)
 
 @analyze.error
+async def analyze_error(ctx: Context, error: Exception | None) -> None:
+    """Handle errors in the analyze command"""
+    if isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(f"Please wait {error.retry_after:.1f} seconds before using this command again.")
+    else:
+        logger.error("Unexpected error in analyze command: %s", error)
+        await ctx.send("An unexpected error occurred. Please try again later.")
+
 @bot.tree.command(name='test-niqqud', description="Test Hebrew text features and analysis")
 async def test_niqqud(interaction: discord.Interaction) -> None:
     """
@@ -224,14 +232,6 @@ async def vowelize_help(interaction: discord.Interaction) -> None:
     )
     embed.set_footer(text="If issues persist, try viewing on a different device or browser")
     await interaction.response.send_message(embed=embed)
-
-async def analyze_error(ctx: Context, error: Exception | None) -> None:
-    """Handle errors in the analyze command"""
-    if isinstance(error, commands.CommandOnCooldown):
-        await ctx.send(f"Please wait {error.retry_after:.1f} seconds before using this command again.")
-    else:
-        logger.error("Unexpected error in analyze command: %s", error)
-        await ctx.send("An unexpected error occurred. Please try again later.")
 
 # Run the bot
 try:
