@@ -62,7 +62,10 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
     embed = Embed(
         title="Vowelized Hebrew Text",
         color=Color.blue(),
-        description=f"**Original Text:**\n{text}\n\n**Vowelized Text:**\n{result.text}"
+        description=(
+            f"**Original Text:**\n```{text}```\n\n"
+            f"**Vowelized Text:**\n```{result.text}```"
+        )
     )
 
     embed.set_footer(text="Powered by Nakdan API • Use !help for more commands")
