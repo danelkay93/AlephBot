@@ -17,7 +17,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Initialize bot with slash commands
-bot = commands.Bot(command_prefix='!', intents=discord.Intents.default())
+bot = commands.Bot(command_prefix='!')
 
 # Sync commands on startup
 @bot.event
