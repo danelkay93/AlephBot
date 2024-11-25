@@ -65,15 +65,12 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
         pos_tags = []
         word_analysis = []
         for word_data in data:
-            options = word_data.get('options', [])
-            if options:
-                try:
+            # Handle the new API response format
+            if isinstance(word_data, dict):
+                options = word_data.get('options', [])
+                if options and isinstance(options[0], dict):
                     option = options[0]
-                    word = option.get('word')
-                    if not word:
-                        logger.error("Missing required 'word' field in API response option: %s", option)
-                        raise KeyError("Missing required 'word' field in API response")
-                        
+                    word = option.get('word', '')
                     words.append(word)
                     lemmas.append(option.get('lemma', ''))
                     pos_tags.append(option.get('partOfSpeech', ''))
@@ -86,15 +83,16 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
                         'person': option.get('person', ''),
                         'tense': option.get('tense', '')
                     })
-                except (KeyError, IndexError) as e:
-                    logger.error("Failed to parse API response option: %s. Error: %s", option, str(e))
-                    raise
+                else:
+                    # Fallback for simple word data
+                    word = word_data.get('word', '')
+                    words.append(word)
+                    lemmas.append('')
+                    pos_tags.append('')
+                    word_analysis.append({})
             else:
-                word = word_data.get('word')
-                if not word:
-                    logger.error("Missing required 'word' field in API response data: %s", word_data)
-                    raise KeyError("Missing required 'word' field in API response")
-                words.append(word)
+                # Handle case where word_data is a string
+                words.append(str(word_data))
                 lemmas.append('')
                 pos_tags.append('')
                 word_analysis.append({})
