@@ -4,7 +4,7 @@ import httpx
 import logging
 from attrs import define
 from tenacity import retry, stop_after_attempt, wait_exponential
-from .hebrew import normalize_hebrew
+from hebrew import Hebrew
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -202,10 +202,9 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
         if original_spaces and len(original_spaces) > len(vowelized_words):
             vowelized_text += original_spaces[-1]
 
-        # Ensure all Unicode characters are preserved
-        normalized_text = normalize_hebrew(vowelized_text)
-        # Force UTF-16 encoding and decoding to preserve combining marks
-        preserved_text = normalized_text.encode('utf-16', 'surrogatepass').decode('utf-16')
+        # Use Hebrew package for proper normalization
+        hebrew_text = Hebrew(vowelized_text)
+        preserved_text = hebrew_text.normalize().string
         
         return NakdanResponse(
             text=preserved_text,

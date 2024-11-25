@@ -149,13 +149,15 @@ async def test_niqqud(interaction: discord.Interaction) -> None:
     Tests Unicode character preservation for Hebrew text with different types of niqqud and marks.
     """
     # Test cases with different Unicode combinations
+    from hebrew import Hebrew
+
     test_cases = [
-        ("Basic Niqqud", "שָׁלוֹם"),  # Basic word with common niqqud
-        ("Dagesh", "אִמָּא"),  # Word with dagesh (doubled consonant)
-        ("Multiple Marks", "בְּרֵאשִׁית"),  # Word with multiple combining marks
-        ("Special Cases", "יְרוּשָׁלַ\u05B4ים"),  # Word with explicit Unicode combining mark
-        ("Mixed Text", "Hello שָׁלוֹם"),  # Mixed Hebrew and Latin
-        ("Full Verse", "וַיֹּ֥אמֶר אֱלֹהִ֖ים יְהִ֣י א֑וֹר"),  # Biblical text with cantillation
+        ("Basic Niqqud", Hebrew("שָׁלוֹם")),  # Basic word with common niqqud
+        ("Dagesh", Hebrew("אִמָּא")),  # Word with dagesh (doubled consonant) 
+        ("Multiple Marks", Hebrew("בְּרֵאשִׁית")),  # Word with multiple combining marks
+        ("Special Cases", Hebrew("יְרוּשָׁלַ\u05B4ים")),  # Word with explicit Unicode combining mark
+        ("Mixed Text", Hebrew("Hello שָׁלוֹם")),  # Mixed Hebrew and Latin
+        ("Full Verse", Hebrew("וַיֹּ֥אמֶר אֱלֹהִ֖ים יְהִ֣י א֑וֹר")),  # Biblical text with cantillation
     ]
     
     embed = Embed(
@@ -164,9 +166,10 @@ async def test_niqqud(interaction: discord.Interaction) -> None:
         description=(
             "Testing Unicode character preservation in different scenarios:\n\n" +
             "\n".join(f"**{name}**\n"
-                     f"Text: `{text}`\n"
-                     f"Unicode: `{' '.join(f'U+{ord(c):04X}' for c in text)}`\n"
-                     f"Chars: `{list(text)}`\n"
+                     f"Text: `{text.string}`\n"
+                     f"Normalized: `{text.normalize().string}`\n"
+                     f"Graphemes: `{list(text.graphemes)}`\n"
+                     f"Text Only: `{text.text_only().string}`\n"
                      "➖➖➖"
                      for name, text in test_cases)
         )
