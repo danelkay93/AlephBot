@@ -54,14 +54,6 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
         await interaction.followup.send(error_message)
         return
 
-    # Get niqqud text using the Nakdan API
-    result = get_nikud(text)
-
-    if result.error:
-        logger.error("Failed to vowelize text: %s", result.error)
-        await interaction.followup.send(f"Sorry, there was an issue processing your text: {result.error}")
-        return
-
     # Create an embed for the response
     embed = Embed(
         title="Hebrew Text Analysis",
