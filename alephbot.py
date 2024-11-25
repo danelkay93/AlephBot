@@ -41,8 +41,10 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
     """
     await interaction.response.defer()
 
+    logger.debug("Vowelize command received text: %r", text)
     # Get vowelized text using the Nakdan API
     result = analyze_text(text, max_length=500)
+    logger.debug("Received API result: %r", result)
 
     if result.error:
         error_message = "❌ "
@@ -59,17 +61,24 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
         return
 
     # Create an embed for the response
+    # Create description with logging of each component
+    description = (
+        f"**Original Text:**\n```{text}```\n"
+        f"➖➖➖➖➖\n"
+        f"**Vowelized Text (נִקּוּד):**\n"
+        f"`{result.text}`\n"  # Single backtick for inline code
+        f"*Use `/vowelize-help` for display troubleshooting*"
+    )
+    logger.debug("Creating embed with description components:")
+    logger.debug("Original text: %r", text)
+    logger.debug("Vowelized result text: %r", result.text)
+    
     embed = Embed(
         title="Vowelized Hebrew Text",
         color=Color.blue(),
-        description=(
-            f"**Original Text:**\n```{text}```\n"
-            f"➖➖➖➖➖\n"
-            f"**Vowelized Text (נִקּוּד):**\n"
-            f"`{result.text}`\n"  # Single backtick for inline code
-            f"*Use `/vowelize-help` for display troubleshooting*"
-        )
+        description=description
     )
+    logger.debug("Final embed description: %r", embed.description)
 
     embed.set_footer(text="Powered by Nakdan API • Use !help for more commands")
     await interaction.followup.send(embed=embed)
