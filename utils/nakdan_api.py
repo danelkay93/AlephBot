@@ -107,15 +107,25 @@ def _call_nakdan_api(text: str, timeout: float = 10.0) -> list[dict[str, Any]]:
         'Content-Type': 'application/json'
     }
     
-    logger.info("Making Nakdan API call - URL: %s, Text Length: %d chars", url, len(text))
-    logger.debug("Nakdan API request - Full text: %s", text)
+    logger.info("Making Nakdan API call - URL: %s", url)
+    logger.debug("Nakdan API request details:"
+                "\nHeaders: %s"
+                "\nPayload: %s"
+                "\nTimeout: %s seconds", 
+                headers, payload, timeout)
     
     with httpx.Client(timeout=timeout) as client:
         response = client.post(url, json=payload, headers=headers)
         response.raise_for_status()
         
-        logger.info("Nakdan API call successful - Status: %d, Response Length: %d bytes", 
-                   response.status_code, len(response.content))
+        logger.info("Nakdan API call successful - Status: %d", response.status_code)
+        logger.debug("Nakdan API response details:"
+                    "\nResponse Headers: %s"
+                    "\nResponse Length: %d bytes"
+                    "\nResponse Content: %s",
+                    dict(response.headers),
+                    len(response.content),
+                    response.text)
         return response.json()
 
 def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> NakdanResponse:
