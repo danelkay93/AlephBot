@@ -175,56 +175,35 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
             original_spaces.append('')
 
         # Process API response
-        words = []
-        lemmas = []
-        pos_tags = []
-        word_analysis = []
+        vowelized_words = []
         
         for word_data in data:
             if isinstance(word_data, dict):
                 if word_data.get('sep'):  # Handle separators (spaces)
-                    words.append(word_data['word'])
-                    lemmas.append('')
-                    pos_tags.append('')
-                    word_analysis.append({})
+                    vowelized_words.append(word_data['word'])
                 else:
                     options = word_data.get('options', [])
-                    if options:  # Take first (most likely) option
-                        vowelized_word = options[0]  # First option is most likely
-                        words.append(vowelized_word)
-                        lemmas.append('')  # We don't get lemma in this format
-                        pos_tags.append('')  # We don't get POS in this format
-                        word_analysis.append({
-                            'word': vowelized_word,
-                            'vowelized': vowelized_word,  # Store vowelized version
-                            'options': options  # Store all options for reference
-                        })
+                    if options and isinstance(options[0], str):  # Take first (most likely) option
+                        vowelized_words.append(options[0])
                     else:
-                        words.append(word_data['word'])
-                        lemmas.append('')
-                        pos_tags.append('')
-                        word_analysis.append({})
+                        vowelized_words.append(word_data.get('word', ''))
             else:
-                words.append(str(word_data))
-                lemmas.append('')
-                pos_tags.append('')
-                word_analysis.append({})
+                vowelized_words.append(str(word_data))
 
-        # Reconstruct text with original spacing
+        # Join words with original spacing
         vowelized_text = ''
-        for i, word in enumerate(words):
+        for i, word in enumerate(vowelized_words):
             if i < len(original_spaces):
                 vowelized_text += original_spaces[i]
             vowelized_text += word
+        
         # Add final spacing if available
-        if original_spaces and len(original_spaces) > len(words):
+        if original_spaces and len(original_spaces) > len(vowelized_words):
             vowelized_text += original_spaces[-1]
 
         return NakdanResponse(
             text=vowelized_text,
-            lemmas=lemmas,
-            pos_tags=pos_tags,
-            word_analysis=word_analysis
+            word_analysis=[]  # Empty for vowelize command
         )
 
     except httpx.HTTPError as e:

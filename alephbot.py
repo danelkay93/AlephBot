@@ -60,62 +60,10 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
 
     # Create an embed for the response
     embed = Embed(
-        title="Hebrew Text Analysis",
+        title="Vowelized Hebrew Text",
         color=Color.blue(),
-        description=f"**Original Text:**\n{text}\n\n**Vowelized Text:**\n{' '.join(word['vowelized'] for word in result.word_analysis if word.get('vowelized'))}"
+        description=f"**Original Text:**\n{text}\n\n**Vowelized Text:**\n{result.text}"
     )
-
-    # Add word analysis if available
-    if result.word_analysis:
-        detailed_analysis = ""
-        for i, word in enumerate(result.word_analysis, 1):
-            if word:
-                analysis_parts = []
-                if word['lemma']: analysis_parts.append(f"📚 Root: `{word['lemma']}`")
-                if word['pos']: analysis_parts.append(f"🏷️ POS: `{word['pos']}`")
-                
-                grammar_parts = []
-                if word['gender']: grammar_parts.append(f"Gender: {word['gender']}")
-                if word['number']: grammar_parts.append(f"Number: {word['number']}")
-                if word['person']: grammar_parts.append(f"Person: {word['person']}")
-                if word['tense']: grammar_parts.append(f"Tense: {word['tense']}")
-                
-                if grammar_parts:
-                    analysis_parts.append(f"📝 Grammar: `{' | '.join(grammar_parts)}`")
-                
-                word_section = f"**{i}. {word['word']}**\n" + "\n".join(analysis_parts)
-                detailed_analysis += word_section + "\n\n"
-        
-        if len(detailed_analysis) > 1024:
-            # Split into multiple fields if too long
-            parts = detailed_analysis.split("\n\n")
-            current_field = ""
-            field_num = 1
-            
-            for part in parts:
-                if len(current_field) + len(part) > 1024:
-                    embed.add_field(
-                        name=f"Word Analysis (Part {field_num})",
-                        value=current_field.strip(),
-                        inline=False
-                    )
-                    current_field = part + "\n\n"
-                    field_num += 1
-                else:
-                    current_field += part + "\n\n"
-            
-            if current_field:
-                embed.add_field(
-                    name=f"Word Analysis (Part {field_num})",
-                    value=current_field.strip(),
-                    inline=False
-                )
-        else:
-            embed.add_field(
-                name="Word Analysis",
-                value=detailed_analysis.strip(),
-                inline=False
-            )
 
     embed.set_footer(text="Powered by Nakdan API • Use !help for more commands")
     await interaction.followup.send(embed=embed)
