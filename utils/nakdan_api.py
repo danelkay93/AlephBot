@@ -143,8 +143,7 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
             'Content-Type': 'application/json'
         }
         
-        try:
-            data = _call_nakdan_api(text, timeout)
+        data = _call_nakdan_api(text, timeout)
 
         # Split original text to preserve spaces
         original_words = text.split()

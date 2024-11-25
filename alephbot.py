@@ -7,7 +7,7 @@ from discord.ext.commands import Context
 from discord import Embed, Color
 
 from utils.config import settings
-from utils.nakdan_api import get_nikud
+from utils.nakdan_api import get_nikud, analyze_text
 
 # Set up logging
 logging.basicConfig(
