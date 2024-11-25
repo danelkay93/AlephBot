@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize bot with slash commands
 intents = discord.Intents.default()
-bot = commands.Bot(command_prefix="", intents=intents)  # Empty string prefix for slash-only bot
+bot = commands.Bot(command_prefix="/", intents=intents)  # Using "/" as prefix for consistency with slash commands
 
 # Sync commands on startup
 @bot.event
