@@ -202,8 +202,13 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
         if original_spaces and len(original_spaces) > len(vowelized_words):
             vowelized_text += original_spaces[-1]
 
+        # Ensure all Unicode characters are preserved
+        normalized_text = normalize_hebrew(vowelized_text)
+        # Force UTF-16 encoding and decoding to preserve combining marks
+        preserved_text = normalized_text.encode('utf-16', 'surrogatepass').decode('utf-16')
+        
         return NakdanResponse(
-            text=normalize_hebrew(vowelized_text),
+            text=preserved_text,
             word_analysis=[]  # Empty for vowelize command
         )
 

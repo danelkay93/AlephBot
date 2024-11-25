@@ -63,9 +63,11 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
         title="Vowelized Hebrew Text",
         color=Color.blue(),
         description=(
-            f"**Original Text:**\n```hebrew\n\u200F{text}\u200E```\n"
+            f"**Original Text:**\n```{text}```\n"
             f"➖➖➖➖➖\n"
-            f"**Vowelized Text:**\n```hebrew\n\u200F{result.text}\u200E```"
+            f"**Vowelized Text (נִקּוּד):**\n"
+            f"`{result.text}`\n"  # Single backtick for inline code
+            f"*Note: If you don't see the vowel marks, please check your font settings*"
         )
     )
 
