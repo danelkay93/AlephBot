@@ -182,9 +182,9 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
         for word_data in data:
             if isinstance(word_data, dict):
                 options = word_data.get('options', [])
-                if options and isinstance(options[0], dict):
-                    # Get the vowelized form from the first option
-                    vowelized_words.append(options[0].get('word', ''))
+                if options and isinstance(options[0], str):
+                    # Get the vowelized form from the first option string
+                    vowelized_words.append(options[0])
                 else:
                     # Fallback to original word if no options available
                     vowelized_words.append(word_data.get('word', ''))
