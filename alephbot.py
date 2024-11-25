@@ -16,35 +16,41 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize bot
-bot = commands.Bot(command_prefix='!')
+# Initialize bot with slash commands
+bot = commands.Bot(command_prefix='!', intents=discord.Intents.default())
+
+# Sync commands on startup
+@bot.event
+async def setup_hook():
+    await bot.tree.sync()
 
 @bot.event
 async def on_ready():
     logger.info('Bot %s is now online!', bot.user)
 
-@bot.command(name='vowelize', help="Add niqqud to Hebrew text")
-@commands.cooldown(1, 30, commands.BucketType.user)  # One use per 30 seconds per user
-async def vowelize(ctx: Context, *, text: str) -> None:
+@bot.tree.command(name='vowelize', description="Add niqqud to Hebrew text")
+@commands.cooldown(1, 30, commands.BucketType.user)
+async def vowelize(interaction: discord.Interaction, text: str) -> None:
     """
     Adds niqqud to the provided Hebrew text using the Nakdan API.
     """
-    processing_msg = await ctx.send("Processing your text... 🔄")
+    await interaction.response.defer()
 
     # Get niqqud text using the Nakdan API
     result = get_nikud(text, max_length=500)
 
     if result.error:
-        await processing_msg.delete()
+        error_message = "❌ "
         if "maximum length" in result.error:
-            await ctx.send("❌ Text is too long! Please keep it under 500 characters.")
+            error_message += "Text is too long! Please keep it under 500 characters."
         elif "must contain Hebrew" in result.error:
-            await ctx.send("❌ Please provide Hebrew text to vowelize. Example: `!vowelize שלום עולם`")
+            error_message += "Please provide Hebrew text to vowelize. Example: `/vowelize שלום עולם`"
         elif "empty" in result.error:
-            await ctx.send("❌ Please provide some text to vowelize. Example: `!vowelize שלום עולם`")
+            error_message += "Please provide some text to vowelize. Example: `/vowelize שלום עולם`"
         else:
             logger.error("Failed to vowelize text: %s", result.error)
-            await ctx.send(f"❌ Sorry, there was an issue processing your text: {result.error}")
+            error_message += f"Sorry, there was an issue processing your text: {result.error}"
+        await interaction.followup.send(error_message)
         return
 
     # Get niqqud text using the Nakdan API
@@ -55,7 +61,6 @@ async def vowelize(ctx: Context, *, text: str) -> None:
         await ctx.send(f"Sorry, there was an issue processing your text: {result.error}")
         return
 
-    await processing_msg.delete()
     # Create an embed for the response
     embed = Embed(
         title="Hebrew Text Analysis",
@@ -116,7 +121,7 @@ async def vowelize(ctx: Context, *, text: str) -> None:
             )
 
     embed.set_footer(text="Powered by Nakdan API • Use !help for more commands")
-    await ctx.send(embed=embed)
+    await interaction.followup.send(embed=embed)
 
 @vowelize.error
 async def vowelize_error(ctx: Context, error: Exception | None) -> None:
@@ -127,31 +132,30 @@ async def vowelize_error(ctx: Context, error: Exception | None) -> None:
         logger.error("Unexpected error in vowelize command: %s", error)
         await ctx.send("An unexpected error occurred. Please try again later.")
 
-@bot.command(name='analyze', help="Analyze Hebrew text morphology")
+@bot.tree.command(name='analyze', description="Analyze Hebrew text morphology")
 @commands.cooldown(1, 30, commands.BucketType.user)
-async def analyze(ctx: Context, *, text: str) -> None:
+async def analyze(interaction: discord.Interaction, text: str) -> None:
     """
     Analyzes Hebrew text and shows morphological information.
     """
-    processing_msg = await ctx.send("Analyzing your text... 🔍")
+    await interaction.response.defer()
 
     result = get_nikud(text, max_length=500)
 
     if result.error:
-        await processing_msg.delete()
+        error_message = "❌ "
         if "maximum length" in result.error:
-            await ctx.send("❌ Text is too long! Please keep it under 500 characters.")
+            error_message += "Text is too long! Please keep it under 500 characters."
         elif "must contain Hebrew" in result.error:
-            await ctx.send("❌ Please provide Hebrew text to analyze. Example: `!analyze ספר`")
+            error_message += "Please provide Hebrew text to analyze. Example: `/analyze ספר`"
         elif "empty" in result.error:
-            await ctx.send("❌ Please provide some text to analyze. Example: `!analyze ספר`")
+            error_message += "Please provide some text to analyze. Example: `/analyze ספר`"
         else:
             logger.error("Failed to analyze text: %s", result.error)
-            await ctx.send(f"❌ Sorry, there was an issue analyzing your text: {result.error}")
+            error_message += f"Sorry, there was an issue analyzing your text: {result.error}"
+        await interaction.followup.send(error_message)
         return
 
-    await processing_msg.delete()
-    
     # Create an embed for morphological analysis
     embed = Embed(
         title="Detailed Morphological Analysis",
@@ -185,7 +189,7 @@ async def analyze(ctx: Context, *, text: str) -> None:
             )
 
     embed.set_footer(text="🔍 Morphological analysis powered by Nakdan API")
-    await ctx.send(embed=embed)
+    await interaction.followup.send(embed=embed)
 
 @analyze.error
 async def analyze_error(ctx: Context, error: Exception | None) -> None:
