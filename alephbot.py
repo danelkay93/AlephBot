@@ -16,10 +16,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize bot with slash commands and required intents
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix=None, intents=intents)
+# Initialize bot with slash commands
+bot = commands.Bot(command_prefix=None)
 
 # Sync commands on startup
 @bot.event
