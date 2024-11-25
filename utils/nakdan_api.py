@@ -4,7 +4,7 @@ import httpx
 import logging
 from attrs import define
 from tenacity import retry, stop_after_attempt, wait_exponential
-from hebrew import Hebrew, Gematria, InvalidHebrewError, HebrewNormalizer
+from hebrew import Hebrew, gematria, InvalidHebrewError, HebrewNormalizer
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
