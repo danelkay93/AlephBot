@@ -79,8 +79,8 @@ def analyze_text(text: str, timeout: float = 10.0, max_length: int = 500) -> Nak
 def is_hebrew(text: str) -> bool:
     """Check if string contains Hebrew characters using the hebrew package."""
     hebrew_text = Hebrew(text)
-    # Use the Hebrew class's methods to check for Hebrew letters
-    return any(char.is_hebrew_letter for char in hebrew_text.graphemes)
+    # Check each grapheme by wrapping it in a Hebrew object
+    return any(Hebrew(char).is_hebrew_letter for char in hebrew_text.graphemes)
 
 @retry(
     stop=stop_after_attempt(3),
