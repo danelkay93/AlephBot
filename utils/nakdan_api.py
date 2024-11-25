@@ -196,7 +196,8 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
         for i, word in enumerate(vowelized_words):
             if i < len(original_spaces):
                 vowelized_text += original_spaces[i]
-            vowelized_text += normalize_hebrew(word)
+            hebrew_word = Hebrew(word)
+            vowelized_text += hebrew_word.normalize().string
         
         # Add final spacing if available
         if original_spaces and len(original_spaces) > len(vowelized_words):
