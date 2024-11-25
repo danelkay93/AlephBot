@@ -41,11 +41,22 @@ def analyze_text(text: str, timeout: float = 10.0, max_length: int = 500) -> Nak
 
         data = _call_nakdan_api(text, timeout)
         
-        # Process API response for analysis
+        # Process API response for analysis and build vowelized text
         word_analysis = []
+        vowelized_words = []
+        
         for word_data in data:
             if isinstance(word_data, dict):
                 options = word_data.get('options', [])
+                # Handle vowelized text
+                if options and isinstance(options[0], str):
+                    vowelized_words.append(options[0])
+                elif word_data.get('sep'):  # Handle separators (spaces)
+                    vowelized_words.append(word_data.get('word', ''))
+                else:
+                    vowelized_words.append(word_data.get('word', ''))
+                
+                # Handle word analysis
                 if options and isinstance(options[0], dict):
                     option = options[0]
                     word_analysis.append({
@@ -61,9 +72,17 @@ def analyze_text(text: str, timeout: float = 10.0, max_length: int = 500) -> Nak
                     word_analysis.append({})
             else:
                 word_analysis.append({})
+                vowelized_words.append(str(word_data))
+
+        # Join the vowelized words to create the final text
+        vowelized_text = ''.join(vowelized_words)
+        
+        # Use Hebrew package for proper normalization
+        hebrew_text = Hebrew(vowelized_text)
+        preserved_text = hebrew_text.normalize().string
 
         return NakdanResponse(
-            text=text,
+            text=preserved_text,
             word_analysis=word_analysis
         )
 
