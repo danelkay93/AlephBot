@@ -16,12 +16,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize bot with required intents
-intents = discord.Intents.default()
-intents.message_content = True
-intents.messages = True
-intents.guilds = True
-bot = commands.Bot(command_prefix='!', intents=intents)
+# Initialize bot
+bot = commands.Bot(command_prefix='!')
 
 @bot.event
 async def on_ready():
