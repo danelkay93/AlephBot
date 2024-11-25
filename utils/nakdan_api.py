@@ -59,13 +59,33 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
             response.raise_for_status()
             data: list[dict[str, Any]] = response.json()
 
-        # Extract the vowelized text and analysis from the response
+        # Split original text to preserve spaces
+        original_words = text.split()
+        original_spaces = []
+        current_pos = 0
+        
+        # Collect original spacing
+        for word in original_words:
+            word_pos = text.find(word, current_pos)
+            if word_pos > current_pos:
+                original_spaces.append(text[current_pos:word_pos])
+            else:
+                original_spaces.append('')
+            current_pos = word_pos + len(word)
+        
+        # Add any trailing space
+        if current_pos < len(text):
+            original_spaces.append(text[current_pos:])
+        else:
+            original_spaces.append('')
+
+        # Process API response
         words = []
         lemmas = []
         pos_tags = []
         word_analysis = []
+        
         for word_data in data:
-            # Handle the new API response format
             if isinstance(word_data, dict):
                 options = word_data.get('options', [])
                 if options and isinstance(options[0], dict):
@@ -84,21 +104,25 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
                         'tense': option.get('tense', '')
                     })
                 else:
-                    # Fallback for simple word data
                     word = word_data.get('word', '')
                     words.append(word)
                     lemmas.append('')
                     pos_tags.append('')
                     word_analysis.append({})
             else:
-                # Handle case where word_data is a string
                 words.append(str(word_data))
                 lemmas.append('')
                 pos_tags.append('')
                 word_analysis.append({})
 
+        # Reconstruct text with original spacing
+        vowelized_text = ''
+        for i, word in enumerate(words):
+            vowelized_text += original_spaces[i] + word
+        vowelized_text += original_spaces[-1]  # Add any trailing space
+
         return NakdanResponse(
-            text="".join(words),
+            text=vowelized_text,
             lemmas=lemmas,
             pos_tags=pos_tags,
             word_analysis=word_analysis
