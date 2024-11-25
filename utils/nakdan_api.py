@@ -118,8 +118,12 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
         # Reconstruct text with original spacing
         vowelized_text = ''
         for i, word in enumerate(words):
-            vowelized_text += original_spaces[i] + word
-        vowelized_text += original_spaces[-1]  # Add any trailing space
+            if i < len(original_spaces):
+                vowelized_text += original_spaces[i]
+            vowelized_text += word
+        # Add final spacing if available
+        if original_spaces and len(original_spaces) > len(words):
+            vowelized_text += original_spaces[-1]
 
         return NakdanResponse(
             text=vowelized_text,
