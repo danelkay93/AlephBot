@@ -58,7 +58,7 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
 
     if result.error:
         logger.error("Failed to vowelize text: %s", result.error)
-        await ctx.send(f"Sorry, there was an issue processing your text: {result.error}")
+        await interaction.followup.send(f"Sorry, there was an issue processing your text: {result.error}")
         return
 
     # Create an embed for the response
