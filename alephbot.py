@@ -63,9 +63,9 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
     # Create an embed for the response
     # Create description with logging of each component
     description = (
-        f"**Original Text:**\n```{text}```\n"
+        f"**נוסח המקור | Original Text:**\n```{text}```\n"
         f"➖➖➖➖➖\n"
-        f"**Vowelized Text (נִקּוּד):**\n"
+        f"**הנוסח המנוקד | Vowelized Text:**\n"
         f"`{result.text}`\n"  # Single backtick for inline code
         f"*Use `/vowelize-help` for display troubleshooting*"
     )
@@ -74,7 +74,6 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
     logger.debug("Vowelized result text: %r", result.text)
     
     embed = Embed(
-        title="Vowelized Hebrew Text",
         color=Color.blue(),
         description=description
     )
