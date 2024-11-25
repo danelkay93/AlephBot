@@ -79,8 +79,8 @@ def analyze_text(text: str, timeout: float = 10.0, max_length: int = 500) -> Nak
 def is_hebrew(text: str) -> bool:
     """Check if string contains Hebrew characters using the hebrew package."""
     hebrew_text = Hebrew(text)
-    # Check each grapheme by wrapping it in a Hebrew object
-    return any(Hebrew(char).is_hebrew_letter for char in hebrew_text.graphemes)
+    # Check if any character is in the Hebrew alphabet range (0x0590-0x05FF)
+    return any('\u0590' <= char <= '\u05FF' for char in str(hebrew_text))
 
 @retry(
     stop=stop_after_attempt(3),
