@@ -143,30 +143,47 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
     await interaction.followup.send(embed=embed)
 
 @analyze.error
-@bot.tree.command(name='test-niqqud', description="Test different Discord formatting for Hebrew niqqud")
+@bot.tree.command(name='test-niqqud', description="Test Hebrew Unicode character preservation")
 async def test_niqqud(interaction: discord.Interaction) -> None:
     """
-    Tests different Discord formatting options for Hebrew text with niqqud.
+    Tests Unicode character preservation for Hebrew text with different types of niqqud and marks.
     """
-    test_word = "שָׁלוֹם"
+    # Test cases with different Unicode combinations
+    test_cases = [
+        ("Basic Niqqud", "שָׁלוֹם"),  # Basic word with common niqqud
+        ("Dagesh", "אִמָּא"),  # Word with dagesh (doubled consonant)
+        ("Multiple Marks", "בְּרֵאשִׁית"),  # Word with multiple combining marks
+        ("Special Cases", "יְרוּשָׁלַ\u05B4ים"),  # Word with explicit Unicode combining mark
+        ("Mixed Text", "Hello שָׁלוֹם"),  # Mixed Hebrew and Latin
+        ("Full Verse", "וַיֹּ֥אמֶר אֱלֹהִ֖ים יְהִ֣י א֑וֹר"),  # Biblical text with cantillation
+    ]
+    
     embed = Embed(
-        title="Hebrew Niqqud Display Test",
+        title="Hebrew Unicode Character Test",
         color=Color.gold(),
         description=(
-            "Testing different Discord formatting options for Hebrew text with niqqud:\n\n"
-            f"1. Plain text:\n{test_word}\n\n"
-            f"2. Single backticks:\n`{test_word}`\n\n"
-            f"3. Triple backticks:\n```{test_word}```\n\n"
-            f"4. Bold:\n**{test_word}**\n\n"
-            f"5. Italic:\n*{test_word}*\n\n"
-            f"6. Bold + Italic:\n***{test_word}***\n\n"
-            f"7. Underline:\n__{test_word}__\n\n"
-            f"8. Spoiler:\n||{test_word}||\n\n"
-            f"9. Quote:\n> {test_word}\n\n"
-            f"10. Code block with language:\n```hebrew\n{test_word}\n```"
+            "Testing Unicode character preservation in different scenarios:\n\n" +
+            "\n".join(f"**{name}**\n"
+                     f"Text: `{text}`\n"
+                     f"Unicode: `{' '.join(f'U+{ord(c):04X}' for c in text)}`\n"
+                     f"Chars: `{list(text)}`\n"
+                     "➖➖➖"
+                     for name, text in test_cases)
         )
     )
-    embed.set_footer(text="Compare which formatting preserves niqqud marks best")
+    
+    # Add technical details
+    embed.add_field(
+        name="Technical Details",
+        value=(
+            "• Each line shows the text and its Unicode codepoints\n"
+            "• Combining marks should appear as separate Unicode points\n"
+            "• Check if combining marks (U+05B0-U+05C4) are preserved"
+        ),
+        inline=False
+    )
+    
+    embed.set_footer(text="Unicode preservation test for Hebrew text")
     await interaction.response.send_message(embed=embed)
 
 @bot.tree.command(name='vowelize-help', description="Get help with viewing vowelized Hebrew text")
