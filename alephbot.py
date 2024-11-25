@@ -67,10 +67,7 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
             f"➖➖➖➖➖\n"
             f"**Vowelized Text (נִקּוּד):**\n"
             f"`{result.text}`\n"  # Single backtick for inline code
-            f"*Note: To see vowel marks properly:*\n"
-            f"• *Use a font that supports Hebrew niqqud (like Segoe UI, Arial, Times New Roman)*\n"
-            f"• *In Discord Settings → Appearance → Chat Font, select a compatible font*\n"
-            f"• *Make sure your system's Hebrew language support is installed*"
+            f"*Use `/vowelize-help` for display troubleshooting*"
         )
     )
 
@@ -146,6 +143,35 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
     await interaction.followup.send(embed=embed)
 
 @analyze.error
+@bot.tree.command(name='vowelize-help', description="Get help with viewing vowelized Hebrew text")
+async def vowelize_help(interaction: discord.Interaction) -> None:
+    """
+    Provides help information about viewing vowelized Hebrew text correctly.
+    """
+    embed = Embed(
+        title="How to View Hebrew Vowel Marks (Niqqud)",
+        color=Color.blue(),
+        description=(
+            "If you can't see the vowel marks (niqqud) properly, try these steps:\n\n"
+            "**1. Use a Compatible Font**\n"
+            "• Segoe UI\n"
+            "• Arial\n"
+            "• Times New Roman\n\n"
+            "**2. Discord Settings**\n"
+            "• Open Discord Settings\n"
+            "• Go to App Settings → Appearance\n"
+            "• Under 'Chat Font', select one of the compatible fonts\n\n"
+            "**3. System Settings**\n"
+            "• Make sure Hebrew language support is installed on your system\n"
+            "• Try updating your system fonts\n\n"
+            "**Test Text:**\n"
+            "`שָׁלוֹם`\n"
+            "*(You should see dots and lines above and below the letters)*"
+        )
+    )
+    embed.set_footer(text="If issues persist, try viewing on a different device or browser")
+    await interaction.response.send_message(embed=embed)
+
 async def analyze_error(ctx: Context, error: Exception | None) -> None:
     """Handle errors in the analyze command"""
     if isinstance(error, commands.CommandOnCooldown):
