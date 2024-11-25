@@ -143,45 +143,51 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
     await interaction.followup.send(embed=embed)
 
 @analyze.error
-@bot.tree.command(name='test-niqqud', description="Test Hebrew Unicode character preservation")
+@bot.tree.command(name='test-niqqud', description="Test Hebrew text features and analysis")
 async def test_niqqud(interaction: discord.Interaction) -> None:
     """
-    Tests Unicode character preservation for Hebrew text with different types of niqqud and marks.
+    Comprehensive test of Hebrew text features including niqqud, gematria, and text analysis.
     """
-    # Test cases with different Unicode combinations
-    from hebrew import Hebrew
+    from hebrew import Hebrew, Gematria
 
     test_cases = [
-        ("Basic Niqqud", Hebrew("שָׁלוֹם")),  # Basic word with common niqqud
-        ("Dagesh", Hebrew("אִמָּא")),  # Word with dagesh (doubled consonant) 
-        ("Multiple Marks", Hebrew("בְּרֵאשִׁית")),  # Word with multiple combining marks
-        ("Special Cases", Hebrew("יְרוּשָׁלַ\u05B4ים")),  # Word with explicit Unicode combining mark
-        ("Mixed Text", Hebrew("Hello שָׁלוֹם")),  # Mixed Hebrew and Latin
-        ("Full Verse", Hebrew("וַיֹּ֥אמֶר אֱלֹהִ֖ים יְהִ֣י א֑וֹר")),  # Biblical text with cantillation
+        ("Basic Niqqud", Hebrew("שָׁלוֹם")),
+        ("Dagesh", Hebrew("אִמָּא")),
+        ("Multiple Marks", Hebrew("בְּרֵאשִׁית")),
+        ("Special Cases", Hebrew("יְרוּשָׁלַ\u05B4ים")),
+        ("Mixed Text", Hebrew("Hello שָׁלוֹם")),
+        ("Full Verse", Hebrew("וַיֹּ֥אמֶר אֱלֹהִ֖ים יְהִ֣י א֑וֹר"))
     ]
     
     embed = Embed(
-        title="Hebrew Unicode Character Test",
+        title="Hebrew Text Analysis",
         color=Color.gold(),
-        description=(
-            "Testing Unicode character preservation in different scenarios:\n\n" +
-            "\n".join(f"**{name}**\n"
-                     f"Text: `{text.string}`\n"
-                     f"Normalized: `{text.normalize().string}`\n"
-                     f"Graphemes: `{list(text.graphemes)}`\n"
-                     f"Text Only: `{text.text_only().string}`\n"
-                     "➖➖➖"
-                     for name, text in test_cases)
-        )
+        description="Comprehensive analysis of Hebrew text features:\n\n"
     )
-    
-    # Add technical details
+
+    for name, text in test_cases:
+        analysis = [
+            f"**{name}**",
+            f"Text: `{text.string}`",
+            f"Normalized: `{text.normalize().string}`",
+            f"Without Niqqud: `{text.text_only().string}`",
+            f"Letters Only: `{''.join(c for c in text if c.is_hebrew_letter)}`",
+            f"Has Niqqud: `{any(c.is_hebrew_niqqud for c in text)}`",
+            f"Gematria: `{Gematria.from_hebrew(text.text_only().string)}`",
+            f"Graphemes: `{' | '.join(str(g) for g in text.graphemes)}`",
+            f"Letter Count: `{sum(1 for c in text if c.is_hebrew_letter)}`",
+            "➖➖➖"
+        ]
+        embed.description += "\n".join(analysis) + "\n\n"
+
     embed.add_field(
-        name="Technical Details",
+        name="Feature Details",
         value=(
-            "• Each line shows the text and its Unicode codepoints\n"
-            "• Combining marks should appear as separate Unicode points\n"
-            "• Check if combining marks (U+05B0-U+05C4) are preserved"
+            "• Normalization: Standardizes Unicode representation\n"
+            "• Text Only: Removes all niqqud and marks\n"
+            "• Gematria: Numerical value of Hebrew letters\n"
+            "• Graphemes: Complete characters with combining marks\n"
+            "• Letter Analysis: Counts and categorizes characters"
         ),
         inline=False
     )

@@ -4,7 +4,7 @@ import httpx
 import logging
 from attrs import define
 from tenacity import retry, stop_after_attempt, wait_exponential
-from hebrew import Hebrew
+from hebrew import Hebrew, Gematria, InvalidHebrewError, HebrewNormalizer
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -77,9 +77,13 @@ def analyze_text(text: str, timeout: float = 10.0, max_length: int = 500) -> Nak
         return NakdanResponse(text="", error=error_msg)
 
 def is_hebrew(text: str) -> bool:
-    """Check if string contains Hebrew characters."""
-    hebrew_pattern = re.compile(r'[\u0590-\u05FF\uFB1D-\uFB4F]')
-    return bool(hebrew_pattern.search(text))
+    """Check if string contains Hebrew characters using the hebrew package."""
+    try:
+        hebrew_text = Hebrew(text)
+        # Consider text Hebrew if it contains any Hebrew letters after normalization
+        return any(char.is_hebrew_letter for char in hebrew_text)
+    except InvalidHebrewError:
+        return False
 
 @retry(
     stop=stop_after_attempt(3),
