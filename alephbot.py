@@ -36,11 +36,28 @@ bot = commands.Bot(command_prefix="/", intents=intents)  # Using "/" as prefix f
 # Sync commands on startup
 @bot.event
 async def setup_hook():
-    await bot.tree.sync()
+    logger.info("Syncing commands globally...")
+    try:
+        synced = await bot.tree.sync()
+        logger.info("Synced %d commands globally", len(synced))
+        
+        # Also sync to all guilds the bot is in
+        for guild in bot.guilds:
+            logger.info("Syncing commands to guild: %s (ID: %s)", guild.name, guild.id)
+            try:
+                guild_synced = await bot.tree.sync(guild=guild)
+                logger.info("Synced %d commands to guild %s", len(guild_synced), guild.name)
+            except Exception as e:
+                logger.error("Failed to sync commands to guild %s: %s", guild.name, e)
+    except Exception as e:
+        logger.error("Failed to sync commands globally: %s", e)
 
 @bot.event
 async def on_ready():
     logger.info('Bot %s is now online!', bot.user)
+    logger.info('Connected to %d guilds:', len(bot.guilds))
+    for guild in bot.guilds:
+        logger.info('- %s (ID: %s)', guild.name, guild.id)
 
 @bot.tree.command(name='vowelize', description="Add niqqud to Hebrew text")
 @commands.cooldown(1, 30, commands.BucketType.user)
