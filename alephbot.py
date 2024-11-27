@@ -36,21 +36,35 @@ bot = commands.Bot(command_prefix="/", intents=intents)  # Using "/" as prefix f
 # Sync commands on startup
 @bot.event
 async def setup_hook():
+    """Initialize bot and sync commands"""
+    logger.info("Bot setup starting...")
+    
+    # Wait for bot to be ready before syncing
+    if not bot.is_ready():
+        logger.info("Waiting for bot to be ready...")
+        await bot.wait_until_ready()
+    
     logger.info("Syncing commands globally...")
     try:
-        synced = await bot.tree.sync()
-        logger.info("Synced %d commands globally", len(synced))
+        # Clear existing commands first
+        bot.tree.clear_commands(guild=None)
+        logger.info("Cleared existing global commands")
         
-        # Also sync to all guilds the bot is in
-        for guild in bot.guilds:
-            logger.info("Syncing commands to guild: %s (ID: %s)", guild.name, guild.id)
-            try:
-                guild_synced = await bot.tree.sync(guild=guild)
-                logger.info("Synced %d commands to guild %s", len(guild_synced), guild.name)
-            except Exception as e:
-                logger.error("Failed to sync commands to guild %s: %s", guild.name, e)
+        # Sync global commands
+        synced = await bot.tree.sync()
+        logger.info("Successfully synced %d commands globally", len(synced))
+        
+    except discord.Forbidden as e:
+        logger.error("Bot lacks permissions to sync commands: %s", e)
+        raise
+    except discord.HTTPException as e:
+        logger.error("HTTP error during global sync: %s", e)
+        raise
     except Exception as e:
-        logger.error("Failed to sync commands globally: %s", e)
+        logger.error("Unexpected error during setup: %s", e, exc_info=True)
+        raise
+    
+    logger.info("Bot setup completed successfully")
 
 @bot.event
 async def on_ready():
