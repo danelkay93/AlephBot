@@ -129,7 +129,10 @@ def _call_nakdan_api(text: str, timeout: float = 10.0) -> list[dict[str, Any]]:
         'Content-Type': 'application/json'
     }
     
-    logger.info("Nakdan API Request - URL: %s | Payload: %s", url, payload)
+    # Format Hebrew text for logging
+    formatted_text = ' '.join(f'U+{ord(c):04X}' for c in text)
+    logger.info("Nakdan API Request - URL: %s | Text: %s | Payload: %r", 
+               url, formatted_text, payload)
     
     with httpx.Client(timeout=timeout) as client:
         response = client.post(url, json=payload, headers=headers)
@@ -139,7 +142,23 @@ def _call_nakdan_api(text: str, timeout: float = 10.0) -> list[dict[str, Any]]:
                    response.status_code,
                    len(response.content),
                    response.headers.get('x-gg-cache-status', 'N/A'))
-        logger.debug("Response Content: %s", response.text)
+        # Format response content for better logging
+        try:
+            response_json = response.json()
+            formatted_response = {
+                'words': [{
+                    'word': word.get('word', ''),
+                    'options': [
+                        ' '.join(f'U+{ord(c):04X}' for c in opt) 
+                        if isinstance(opt, str) else opt
+                        for opt in word.get('options', [])
+                    ]
+                } for word in response_json]
+            }
+            logger.debug("Response Content: %r", formatted_response)
+        except Exception as e:
+            logger.error("Failed to format response for logging: %s", e)
+            logger.debug("Raw Response Content: %r", response.text)
         return response.json()
 
 def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> NakdanResponse:

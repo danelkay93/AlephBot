@@ -9,10 +9,14 @@ from discord import Embed, Color
 from utils.config import settings
 from utils.nakdan_api import get_nikud, analyze_text
 
-# Set up logging
+# Set up logging with UTF-8 encoding
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('bot.log', encoding='utf-8')
+    ]
 )
 
 # Disable noisy HTTP client logging
@@ -36,6 +40,10 @@ async def on_ready():
 @bot.tree.command(name='vowelize', description="Add niqqud to Hebrew text")
 @commands.cooldown(1, 30, commands.BucketType.user)
 async def vowelize(interaction: discord.Interaction, text: str) -> None:
+    logger.info("Vowelize command received from %s#%s (%s)", 
+                interaction.user.name, 
+                interaction.user.discriminator,
+                interaction.user.id)
     """
     Adds niqqud to the provided Hebrew text using the Nakdan API.
     """
@@ -94,6 +102,10 @@ async def vowelize_error(ctx: Context, error: Exception | None) -> None:
 @bot.tree.command(name='analyze', description="Analyze Hebrew text morphology")
 @commands.cooldown(1, 30, commands.BucketType.user)
 async def analyze(interaction: discord.Interaction, text: str) -> None:
+    logger.info("Analyze command received from %s#%s (%s)", 
+                interaction.user.name, 
+                interaction.user.discriminator,
+                interaction.user.id)
     """
     Analyzes Hebrew text and shows morphological information.
     """
