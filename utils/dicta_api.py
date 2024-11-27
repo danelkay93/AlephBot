@@ -87,8 +87,9 @@ class DictaTranslateAPI:
                 # Process response chunks
                 translated_chunks = []
                 current_json = ""
+                translation_complete = False
                 
-                while True:
+                while not translation_complete:
                     try:
                         response = await ws.recv()
                         
@@ -101,13 +102,15 @@ class DictaTranslateAPI:
                         # Handle ping/pong immediately
                         try:
                             data = json.loads(response)
-                            if isinstance(data, dict) and data.get("type") == "ping":
-                                await ws.send(json.dumps({"type": "pong"}))
-                                logger.debug("Sent pong response")
-                                continue
-                            elif isinstance(data, dict) and data.get("stage") == "done":
-                                logger.debug("Received done message")
-                                break
+                            if isinstance(data, dict):
+                                if data.get("type") == "ping":
+                                    await ws.send(json.dumps({"type": "pong"}))
+                                    logger.debug("Sent pong response")
+                                    continue
+                                elif data.get("stage") == "done":
+                                    logger.debug("Received done message")
+                                    translation_complete = True
+                                    break
                         except json.JSONDecodeError:
                             pass  # Not a complete message, continue accumulating
                         
@@ -122,8 +125,10 @@ class DictaTranslateAPI:
                             if isinstance(data, list):
                                 for chunk in data:
                                     if isinstance(chunk, dict) and "out" in chunk:
-                                        translated_chunks.append(chunk["out"])
-                                        logger.debug("Added translation chunk: %s", chunk["out"])
+                                        translated_text = chunk["out"].strip()
+                                        if translated_text:
+                                            translated_chunks.append(translated_text)
+                                            logger.debug("Added translation chunk: %s", translated_text)
                             
                             # Clear accumulated JSON after successful parse
                             current_json = ""

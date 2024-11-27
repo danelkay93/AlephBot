@@ -385,66 +385,74 @@ class TranslationView(discord.ui.View):
 
     @discord.ui.button(label="Translate", style=discord.ButtonStyle.primary)
     async def translate_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Get the message content to translate
-        message = interaction.message
-        if not message or not message.content:
-            await interaction.response.send_message("No text to translate!", ephemeral=True)
-            return
-
         try:
-            translated_text = await translate_client.translate(
-                text=message.content,
-                direction=self.direction,
-                genre=self.genre,
-                temperature=self.temperature
-            )
-            
-            embed = discord.Embed(
-                title="Translation Result",
-                color=discord.Color.blue()
-            )
-            
-            direction_display = "Hebrew → English" if self.direction == "he-en" else "English → Hebrew"
-            
-            embed.add_field(
-                name="Original Text",
-                value=f"```{message.content}```",
-                inline=False
-            )
-            embed.add_field(
-                name="Translated Text", 
-                value=f"```{translated_text}```",
-                inline=False
-            )
-            embed.add_field(
-                name="Settings",
-                value=(
-                    f"🔄 Direction: {direction_display}\n"
-                    f"📝 Genre: {self.genre}\n"
-                    f"🎲 Temperature: {self.temperature:.2f}"
-                ),
-                inline=True
-            )
-            
-            embed.set_footer(text="Powered by Dicta Translation API • Use /help for more info")
-            
+            # Get the message content to translate
+            message = interaction.message
+            if not message or not message.content:
+                await interaction.response.send_message("No text to translate!", ephemeral=True)
+                return
+
+            # Defer the response since translation might take time
+            await interaction.response.defer()
+
             try:
-                await interaction.response.send_message(embed=embed)
-            except discord.InteractionResponded:
+                translated_text = await translate_client.translate(
+                    text=message.content,
+                    direction=self.direction,
+                    genre=self.genre,
+                    temperature=self.temperature
+                )
+                
+                embed = discord.Embed(
+                    title="Translation Result",
+                    color=discord.Color.blue()
+                )
+                
+                direction_display = "Hebrew → English" if self.direction == "he-en" else "English → Hebrew"
+                
+                embed.add_field(
+                    name="Original Text",
+                    value=f"```{message.content}```",
+                    inline=False
+                )
+                embed.add_field(
+                    name="Translated Text", 
+                    value=f"```{translated_text}```",
+                    inline=False
+                )
+                embed.add_field(
+                    name="Settings",
+                    value=(
+                        f"🔄 Direction: {direction_display}\n"
+                        f"📝 Genre: {self.genre}\n"
+                        f"🎲 Temperature: {self.temperature:.2f}"
+                    ),
+                    inline=True
+                )
+                
+                embed.set_footer(text="Powered by Dicta Translation API • Use /help for more info")
+                
                 await interaction.followup.send(embed=embed)
-            
+                
+            except Exception as e:
+                logger.error("Translation error: %s", str(e), exc_info=True)
+                error_msg = "An error occurred during translation. Please try again later."
+                if "too many requests" in str(e).lower():
+                    error_msg = "Rate limit exceeded. Please wait a moment before trying again."
+                elif "timeout" in str(e).lower():
+                    error_msg = "Translation timed out. Please try again with shorter text."
+                
+                await interaction.followup.send(
+                    error_msg,
+                    ephemeral=True
+                )
+                
+        except discord.NotFound:
+            # Interaction token has expired, ignore
+            logger.warning("Interaction expired before response could be sent")
+            pass
         except Exception as e:
-            logger.error("Translation error: %s", str(e), exc_info=True)
-            error_msg = "An error occurred during translation. Please try again later."
-            if "too many requests" in str(e).lower():
-                error_msg = "Rate limit exceeded. Please wait a moment before trying again."
-            elif "timeout" in str(e).lower():
-                error_msg = "Translation timed out. Please try again with shorter text."
-            
-            await interaction.response.send_message(
-                error_msg,
-                ephemeral=True
-            )
+            logger.error("Unexpected error in translate button: %s", str(e), exc_info=True)
 
 @bot.tree.command(
     name='translate',
