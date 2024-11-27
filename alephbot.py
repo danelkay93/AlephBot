@@ -375,8 +375,10 @@ class TranslationView(discord.ui.View):
         placeholder="Select genre",
         options=[
             discord.SelectOption(label="Modern", value="modern", default=True),
+            discord.SelectOption(label="Modern (Fancy)", value="modern-fancy"),
+            discord.SelectOption(label="Rabbinic", value="rabbinic"),
+            discord.SelectOption(label="Pre-modern", value="premodern"),
             discord.SelectOption(label="Biblical", value="biblical"),
-            discord.SelectOption(label="Mishnaic", value="mishnaic"),
             discord.SelectOption(label="Poetic", value="poetic")
         ]
     )
