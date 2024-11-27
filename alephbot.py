@@ -10,6 +10,11 @@ from discord import Embed, Color
 
 from utils.config import settings
 from utils.nakdan_api import get_nikud, analyze_text, get_lemmas
+from utils.discord_helpers import (
+    handle_command_error,
+    create_hebrew_embed,
+    handle_hebrew_command_error
+)
 
 # Configure logging with proper encoding for Hebrew text
 logging.basicConfig(
@@ -115,39 +120,19 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
     logger.debug("Received API result: %r", result)
 
     if result.error:
-        error_message = "❌ "
-        if "maximum length" in result.error:
-            error_message += "Text is too long! Please keep it under 500 characters."
-        elif "must contain Hebrew" in result.error:
-            error_message += "Please provide Hebrew text to vowelize. Example: `/vowelize שלום עולם`"
-        elif "empty" in result.error:
-            error_message += "Please provide some text to vowelize. Example: `/vowelize שלום עולם`"
-        else:
-            logger.error("Failed to vowelize text: %s", result.error)
-            error_message += f"Sorry, there was an issue processing your text: {result.error}"
-        await interaction.followup.send(error_message)
+        await handle_hebrew_command_error(interaction, result.error)
         return
 
-    # Create an embed for the response
-    # Create description with logging of each component
-    description = (
-        f"**נוסח המקור | Original Text:**\n```{text}```\n"
-        f"➖➖➖➖➖\n"
-        f"**הַנּוֹסֵחַ הַמְּנֻוקָּד | Vowelized Text:**\n"
-        f"# {result.text}\n"  # Using heading format for larger text without code block
-        f"*Use `/vowelize-help` for display troubleshooting*"
+    embed = create_hebrew_embed(
+        title="הַנּוֹסֵחַ הַמְּנֻוקָּד | Vowelized Text",
+        original_text=text,
+        color=Color.blue()
     )
-    logger.debug("Creating embed with description components:")
-    logger.debug("Original text: %r", text)
-    logger.debug("Vowelized result text: %r", result.text)
     
-    embed = Embed(
-        color=Color.blue(),
-        description=description
-    )
-    logger.debug("Final embed description: %r", embed.description)
-
-    embed.set_footer(text="Powered by Nakdan API • Use !help for more commands")
+    embed.description += f"\n**Result:**\n# {result.text}\n"
+    embed.description += "*Use `/vowelize-help` for display troubleshooting*"
+    
+    logger.debug("Vowelized result: %r", result.text)
     await interaction.followup.send(embed=embed)
 
 @vowelize.error
