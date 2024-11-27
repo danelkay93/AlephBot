@@ -236,6 +236,68 @@ async def test_niqqud(interaction: discord.Interaction) -> None:
     embed.set_footer(text="Unicode preservation test for Hebrew text")
     await interaction.response.send_message(embed=embed)
 
+@bot.tree.command(name='lemmatize', description="Get the base/root form of Hebrew words")
+@commands.cooldown(1, 30, commands.BucketType.user)
+async def lemmatize(interaction: discord.Interaction, text: str) -> None:
+    logger.info("Lemmatize command received from %s#%s (%s)", 
+                interaction.user.name, 
+                interaction.user.discriminator,
+                interaction.user.id)
+    """
+    Gets the base/root form (lemma) of Hebrew words.
+    """
+    await interaction.response.defer()
+
+    result = get_lemmas(text, max_length=500)
+
+    if result.error:
+        error_message = "❌ "
+        if "maximum length" in result.error:
+            error_message += "Text is too long! Please keep it under 500 characters."
+        elif "must contain Hebrew" in result.error:
+            error_message += "Please provide Hebrew text to lemmatize. Example: `/lemmatize ספרים`"
+        elif "empty" in result.error:
+            error_message += "Please provide some text to lemmatize. Example: `/lemmatize ספרים`"
+        else:
+            logger.error("Failed to lemmatize text: %s", result.error)
+            error_message += f"Sorry, there was an issue processing your text: {result.error}"
+        await interaction.followup.send(error_message)
+        return
+
+    # Create an embed for the response
+    embed = Embed(
+        title="שורשים ובסיסי מילים | Word Roots & Base Forms",
+        color=Color.purple(),
+        description=f"**Original Text:**\n```{text}```\n➖➖➖➖➖"
+    )
+
+    # Add analysis for each word
+    for analysis in result.word_analysis:
+        if not analysis:
+            continue
+            
+        word = analysis.get('word', '')
+        lemma = analysis.get('lemma', '')
+        
+        if word and lemma:
+            embed.add_field(
+                name=f"📝 {word}",
+                value=f"Base form: `{lemma}`",
+                inline=True
+            )
+
+    embed.set_footer(text="🔍 Lemmatization powered by Nakdan API")
+    await interaction.followup.send(embed=embed)
+
+@lemmatize.error
+async def lemmatize_error(ctx: Context, error: Exception | None) -> None:
+    """Handle errors in the lemmatize command"""
+    if isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(f"Please wait {error.retry_after:.1f} seconds before using this command again.")
+    else:
+        logger.error("Unexpected error in lemmatize command: %s", error)
+        await ctx.send("An unexpected error occurred. Please try again later.")
+
 @bot.tree.command(name='vowelize-help', description="Get help with viewing vowelized Hebrew text")
 async def vowelize_help(interaction: discord.Interaction) -> None:
     """

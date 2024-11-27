@@ -183,6 +183,76 @@ def _call_nakdan_api(text: str, timeout: float = 10.0, task: str = "nakdan") -> 
             logger.debug("Raw Response Content: %r", response.text)
         return response.json()
 
+def get_lemmas(text: str, timeout: float = 10.0, max_length: int = 500) -> NakdanResponse:
+    """
+    Gets the base/root form (lemma) of Hebrew words.
+    
+    Args:
+        text: The Hebrew text to process
+        timeout: Maximum time in seconds to wait for API response
+        max_length: Maximum allowed text length
+        
+    Returns:
+        NakdanResponse containing lemmatized text and word analysis
+    """
+    try:
+        if not text.strip():
+            return NakdanResponse(text="", error="Text cannot be empty")
+        
+        if len(text) > max_length:
+            return NakdanResponse(text="", error=f"Text exceeds maximum length of {max_length} characters")
+            
+        if not is_hebrew(text):
+            return NakdanResponse(text="", error="Text must contain Hebrew characters")
+
+        data = _call_nakdan_api(text, timeout, task="nakdan")
+        
+        # Process API response for lemmatization
+        lemmatized_words = []
+        word_analysis = []
+        
+        for word_data in data:
+            if isinstance(word_data, dict):
+                word = word_data.get('word', '')
+                options = word_data.get('options', [])
+                
+                # Extract lemma from morphological analysis
+                lemma = word  # Default to original word
+                if options and isinstance(options[0], list) and len(options[0]) > 1:
+                    morph_data = options[0][1]
+                    if morph_data and len(morph_data) > 0:
+                        # Get lemma from first morphological analysis
+                        lemma = morph_data[0][1] if len(morph_data[0]) > 1 else word
+                
+                lemmatized_words.append(lemma)
+                
+                # Add analysis info
+                analysis = {
+                    'word': word,
+                    'lemma': lemma
+                }
+                word_analysis.append(analysis)
+            else:
+                lemmatized_words.append(str(word_data))
+                word_analysis.append({})
+
+        # Join the lemmatized words
+        lemmatized_text = ' '.join(lemmatized_words)
+        
+        return NakdanResponse(
+            text=lemmatized_text,
+            word_analysis=word_analysis
+        )
+
+    except httpx.HTTPError as e:
+        error_msg = f"Connection error: {str(e)}"
+        logger.error("HTTP error occurred while calling Nakdan API: %s", str(e), exc_info=True)
+        return NakdanResponse(text="", error=error_msg)
+    except Exception as e:
+        error_msg = f"Processing error: {str(e)}"
+        logger.error("Error getting lemmas with Nakdan API: %s", str(e), exc_info=True)
+        return NakdanResponse(text="", error=error_msg)
+
 def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> NakdanResponse:
     """
     Sends Hebrew text to the Nakdan API and returns it with niqqud.
