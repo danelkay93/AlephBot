@@ -17,7 +17,7 @@ from utils.hebrew_constants import (
 )
 import discord
 from discord.ext import commands
-from discord import Embed, Color
+from discord import Embed, Color, SelectOption, ui
 
 # Configure logging
 configure_logging('alephbot.log')
@@ -93,6 +93,21 @@ async def lemmatize(interaction: discord.Interaction, text: str) -> None:
         embed.add_field(name=word, value=f"Base form: {lemma}", inline=True)
     await interaction.followup.send(embed=embed)
 
+class GenreSelect(ui.Select):
+    def __init__(self):
+        options = [
+            SelectOption(label="Modern", value="modern", description="Modern Hebrew/English", default=True),
+            SelectOption(label="Biblical", value="biblical", description="Biblical Hebrew"),
+            SelectOption(label="Mishnaic", value="mishnaic", description="Mishnaic Hebrew"),
+            SelectOption(label="Poetry", value="poetry", description="Poetic Hebrew")
+        ]
+        super().__init__(placeholder="Select genre...", options=options)
+
+class TranslationView(ui.View):
+    def __init__(self, *, timeout=180):
+        super().__init__(timeout=timeout)
+        self.add_item(GenreSelect())
+
 @bot.tree.command(name="translate", description="Translate text between Hebrew and English")
 @commands.cooldown(1, 30, commands.BucketType.user)
 async def translate(interaction: discord.Interaction, text: str) -> None:
@@ -115,7 +130,29 @@ async def translate(interaction: discord.Interaction, text: str) -> None:
             color=Color.blue(),
             description=f"**Original Text:**\n{text}\n\n**Translated Text:**\n{translated}"
         )
-        await interaction.followup.send(embed=embed)
+        view = TranslationView()
+        
+        async def genre_callback(interaction: discord.Interaction):
+            genre = interaction.data["values"][0]
+            try:
+                new_translation = await translate_client.translate(
+                    text=text,
+                    direction=direction,
+                    genre=genre,
+                    temperature=0
+                )
+                new_embed = Embed(
+                    title=f"Translation ({genre.title()} Style)",
+                    color=Color.blue(),
+                    description=f"**Original Text:**\n{text}\n\n**Translated Text:**\n{new_translation}"
+                )
+                await interaction.response.edit_message(embed=new_embed, view=view)
+            except Exception as e:
+                logger.error("Translation failed: %s", e)
+                await interaction.response.send_message("Translation failed. Please try again later.", ephemeral=True)
+        
+        view.children[0].callback = genre_callback
+        await interaction.followup.send(embed=embed, view=view)
     except Exception as e:
         logger.error("Translation failed: %s", e)
         await interaction.followup.send("Translation failed. Please try again later.")
