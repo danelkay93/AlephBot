@@ -105,7 +105,7 @@ async def setup_hook():
         logger.error("Failed during bot setup: %s", e, exc_info=True)
         raise
 
-@bot.event
+@bot.event 
 async def on_ready():
     """Handle bot ready event"""
     logger.info('Bot %s is now online!', bot.user)
@@ -118,6 +118,50 @@ async def on_ready():
     logger.info("Currently registered commands:")
     for cmd in commands:
         logger.info("- /%s", cmd.name)
+
+@bot.tree.error
+async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    """Handle application command errors globally"""
+    if isinstance(error, app_commands.CommandOnCooldown):
+        await interaction.response.send_message(
+            f"This command is on cooldown. Try again in {error.retry_after:.2f} seconds.",
+            ephemeral=True
+        )
+        return
+
+    if isinstance(error, app_commands.MissingPermissions):
+        perms = ", ".join(error.missing_permissions)
+        await interaction.response.send_message(
+            f"You are missing the following permissions to run this command: {perms}",
+            ephemeral=True
+        )
+        return
+
+    if isinstance(error, app_commands.BotMissingPermissions):
+        perms = ", ".join(error.missing_permissions) 
+        await interaction.response.send_message(
+            f"I am missing the following permissions to run this command: {perms}",
+            ephemeral=True
+        )
+        return
+
+    if isinstance(error, app_commands.CommandInvokeError):
+        await interaction.response.send_message(
+            "There was an error running this command. The error has been logged.",
+            ephemeral=True
+        )
+        logger.error("Command error in %s:", interaction.command.name, exc_info=error.original)
+        return
+
+    # Log unhandled errors
+    logger.error("Unhandled app command error:", exc_info=error)
+    try:
+        await interaction.response.send_message(
+            "An unexpected error occurred. Please try again later.",
+            ephemeral=True
+        )
+    except discord.InteractionResponded:
+        pass
 
 @bot.tree.command(
     name='vowelize',
