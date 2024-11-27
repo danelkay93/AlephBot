@@ -173,7 +173,7 @@ def _call_nakdan_api(text: str, timeout: float = DEFAULT_TIMEOUT, task: str = "n
             logger.debug("Raw Response Content: %r", response.text)
         return response.json()
 
-def get_lemmas(text: str, timeout: float = 10.0, max_length: int = 500) -> NakdanResponse:
+def get_lemmas(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse:
     """
     Gets the base/root form (lemma) of Hebrew words.
     

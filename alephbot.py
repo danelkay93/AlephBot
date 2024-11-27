@@ -164,7 +164,7 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
 
     # Create an embed for morphological analysis
     embed = Embed(
-        title="ניתוח דקדוקי | Morphological Analysis",
+        title=EmbedTitles.MORPHOLOGICAL_ANALYSIS,
         color=Color.green(),
         description=f"**Text to analyze:**\n```{text}```\n➖➖➖➖➖"
     )
@@ -238,7 +238,7 @@ async def lemmatize(interaction: discord.Interaction, text: str) -> None:
 
     # Create an embed for the response
     embed = Embed(
-        title="שורשים ובסיסי מילים | Word Roots & Base Forms",
+        title=EmbedTitles.WORD_ROOTS,
         color=Color.purple(),
         description=f"**Original Text:**\n```{text}```\n➖➖➖➖➖"
     )
