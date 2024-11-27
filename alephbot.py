@@ -21,6 +21,7 @@ from discord import Embed, Color
 
 # Configure logging
 configure_logging('alephbot.log')
+logger = logging.getLogger(__name__)
 
 # Initialize bot
 intents = discord.Intents.default()
