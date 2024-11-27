@@ -78,6 +78,7 @@ class DictaTranslateAPI:
                             
                         logger.debug("Received WebSocket message: %r", response)
                         
+                        # Accumulate partial JSON chunks
                         try:
                             data = json.loads(response)
                             
@@ -87,24 +88,32 @@ class DictaTranslateAPI:
                                 for chunk in data:
                                     if isinstance(chunk, dict) and "out" in chunk:
                                         translated_chunks.append(chunk["out"])
+                                        logger.debug("Added translation chunk: %s", chunk["out"])
                             elif isinstance(data, dict):
                                 if data.get("stage") == "done":
+                                    logger.debug("Received done message")
                                     break
                                 elif data.get("type") == "ping":
                                     # Send pong response
                                     await ws.send(json.dumps({"type": "pong"}))
-                        except json.JSONDecodeError:
-                            # Handle partial/chunked JSON responses
-                            logger.debug("Received partial JSON chunk, skipping: %r", response)
+                                    logger.debug("Sent pong response")
+                        except json.JSONDecodeError as e:
+                            # Only log partial chunks at debug level
+                            logger.debug("Received partial JSON chunk: %r (Error: %s)", response, str(e))
                             continue
                             
                     except asyncio.TimeoutError:
                         raise ValueError("Translation timed out")
                 
+                # Check if we got any translation chunks
                 if not translated_chunks:
+                    logger.error("No translation chunks received in response")
                     raise ValueError("No translation received")
-                    
-                return " ".join(translated_chunks)
+                
+                # Join all translation chunks
+                result = " ".join(translated_chunks)
+                logger.debug("Final translation: %s", result)
+                return result
                 
         except WebSocketException as e:
             logger.error("WebSocket error during translation: %s", str(e))
