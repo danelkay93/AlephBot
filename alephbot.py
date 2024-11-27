@@ -107,6 +107,12 @@ class TranslationView(ui.View):
     def __init__(self, *, timeout=180):
         super().__init__(timeout=timeout)
         self.add_item(GenreSelect())
+        self.translate_button = ui.Button(
+            label="Translate",
+            style=discord.ButtonStyle.primary,
+            custom_id="translate_button"
+        )
+        self.add_item(self.translate_button)
 
 @bot.tree.command(name="translate", description="Translate text between Hebrew and English")
 @commands.cooldown(1, 30, commands.BucketType.user)
@@ -127,20 +133,26 @@ async def translate(interaction: discord.Interaction, text: str) -> None:
     )
     view = TranslationView()
     
+    # Store selected genre
+    selected_genre = ["modern"]  # Default genre
+    
     async def genre_callback(interaction: discord.Interaction):
-        genre = interaction.data["values"][0]
+        selected_genre[0] = interaction.data["values"][0]
+        await interaction.response.defer()
+    
+    async def translate_callback(interaction: discord.Interaction):
         try:
             translated = await translate_client.translate(
                 text=text,
                 direction=direction,
-                genre=genre,
+                genre=selected_genre[0],
                 temperature=0
             )
             if not translated:
                 raise ValueError("No translation received")
                 
             new_embed = Embed(
-                title=f"Translation ({genre.title()} Style)",
+                title=f"Translation ({selected_genre[0].title()} Style)",
                 color=Color.blue(),
                 description=f"**Original Text:**\n{text}\n\n**Translated Text:**\n{translated}"
             )
@@ -152,7 +164,8 @@ async def translate(interaction: discord.Interaction, text: str) -> None:
                 ephemeral=True
             )
     
-    view.children[0].callback = genre_callback
+    view.children[0].callback = genre_callback  # Genre select dropdown
+    view.translate_button.callback = translate_callback  # Translate button
     await interaction.followup.send(embed=embed, view=view)
 
 @bot.tree.command(name="invite", description="Get an invite link to add the bot to your server")
