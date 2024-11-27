@@ -10,17 +10,14 @@ from discord import Embed, Color
 from utils.config import settings
 from utils.nakdan_api import get_nikud, analyze_text
 
-# Set up logging with UTF-8 encoding
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-handler.setStream(open(sys.stdout.fileno(), mode='w', encoding='utf-8', buffering=1))
-
-file_handler = logging.FileHandler('bot.log', encoding='utf-8')
-file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-
+# Configure logging with proper encoding for Hebrew text
 logging.basicConfig(
     level=logging.DEBUG,
-    handlers=[handler, file_handler]
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(open(sys.stdout.fileno(), 'w', encoding='utf-8', buffering=1)),
+        logging.FileHandler('bot.log', encoding='utf-8')
+    ]
 )
 
 # Disable noisy HTTP client logging

@@ -174,7 +174,8 @@ def _call_nakdan_api(text: str, timeout: float = 10.0) -> list[dict[str, Any]]:
         # Format response content for better logging
         try:
             response_json = response.json()
-            logger.debug("Raw Response Content: %s", response.text)
+            # Safely log response content
+            logger.debug("Raw Response Content: %r", response_json)
         except Exception as e:
             logger.error("Failed to format response for logging: %s", e)
             logger.debug("Raw Response Content: %r", response.text)
