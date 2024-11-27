@@ -174,9 +174,8 @@ async def vowelize(
     text: str,
     timeout: float = DEFAULT_TIMEOUT
 ) -> None:
-    logger.info("Vowelize command received from %s#%s (%s)", 
-                interaction.user.name, 
-                interaction.user.discriminator,
+    logger.info("Vowelize command received from %s (%s)", 
+                interaction.user.global_name or interaction.user.name,
                 interaction.user.id)
     """
     Adds niqqud to the provided Hebrew text using the Nakdan API.
@@ -223,9 +222,8 @@ async def analyze(
     text: str,
     timeout: float = DEFAULT_TIMEOUT
 ) -> None:
-    logger.info("Analyze command received from %s#%s (%s)", 
-                interaction.user.name, 
-                interaction.user.discriminator,
+    logger.info("Analyze command received from %s (%s)", 
+                interaction.user.global_name or interaction.user.name,
                 interaction.user.id)
     """
     Analyzes Hebrew text and shows morphological information.
@@ -304,9 +302,8 @@ async def lemmatize(
     text: str,
     timeout: float = DEFAULT_TIMEOUT
 ) -> None:
-    logger.info("Lemmatize command received from %s#%s (%s)", 
-                interaction.user.name, 
-                interaction.user.discriminator,
+    logger.info("Lemmatize command received from %s (%s)", 
+                interaction.user.global_name or interaction.user.name,
                 interaction.user.id)
     """
     Gets the base/root form (lemma) of Hebrew words.
@@ -465,9 +462,8 @@ async def translate(interaction: discord.Interaction, text: str) -> None:
         genre: Translation genre (modern, biblical, mishnaic, poetic)
         temperature: Creativity level (0-1, higher values = more creative translations)
     """
-    logger.info("Translate command received from %s#%s (%s)", 
-                interaction.user.name,
-                interaction.user.discriminator,
+    logger.info("Translate command received from %s (%s)", 
+                interaction.user.global_name or interaction.user.name,
                 interaction.user.id)
     
     await interaction.response.defer()
