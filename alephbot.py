@@ -108,7 +108,7 @@ async def on_ready():
 
 @bot.tree.command(name='vowelize', description="Add niqqud to Hebrew text")
 @commands.cooldown(1, 30, commands.BucketType.user)
-async def vowelize(interaction: discord.Interaction, text: str) -> None:
+async def vowelize(interaction: discord.Interaction, text: str, *, timeout: float = DEFAULT_TIMEOUT) -> None:
     logger.info("Vowelize command received from %s#%s (%s)", 
                 interaction.user.name, 
                 interaction.user.discriminator,
@@ -120,7 +120,7 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
 
     logger.debug("Vowelize command received text: %r", text)
     # Get vowelized text using the Nakdan API
-    result = analyze_text(text, max_length=500)
+    result = analyze_text(text, timeout=timeout, max_length=MAX_TEXT_LENGTH)
     logger.debug("Received API result: %r", result)
 
     if result.error:
@@ -150,7 +150,7 @@ async def vowelize_error(ctx: Context, error: Exception | None) -> None:
 
 @bot.tree.command(name='analyze', description="Analyze Hebrew text morphology")
 @commands.cooldown(1, 30, commands.BucketType.user)
-async def analyze(interaction: discord.Interaction, text: str) -> None:
+async def analyze(interaction: discord.Interaction, text: str, *, timeout: float = DEFAULT_TIMEOUT) -> None:
     logger.info("Analyze command received from %s#%s (%s)", 
                 interaction.user.name, 
                 interaction.user.discriminator,
@@ -160,7 +160,7 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
     """
     await interaction.response.defer()
 
-    result = analyze_text(text)
+    result = analyze_text(text, timeout=timeout, max_length=MAX_TEXT_LENGTH)
 
     if result.error:
         await handle_hebrew_command_error(interaction, result.error)
@@ -224,7 +224,7 @@ async def analyze_error(ctx: Context, error: Exception | None) -> None:
 
 @bot.tree.command(name='lemmatize', description="Get the base/root form of Hebrew words")
 @commands.cooldown(1, 30, commands.BucketType.user)
-async def lemmatize(interaction: discord.Interaction, text: str) -> None:
+async def lemmatize(interaction: discord.Interaction, text: str, *, timeout: float = DEFAULT_TIMEOUT) -> None:
     logger.info("Lemmatize command received from %s#%s (%s)", 
                 interaction.user.name, 
                 interaction.user.discriminator,
@@ -234,7 +234,7 @@ async def lemmatize(interaction: discord.Interaction, text: str) -> None:
     """
     await interaction.response.defer()
 
-    result = get_lemmas(text)
+    result = get_lemmas(text, timeout=timeout, max_length=MAX_TEXT_LENGTH)
 
     if result.error:
         await handle_hebrew_command_error(interaction, result.error)
