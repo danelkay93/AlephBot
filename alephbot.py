@@ -156,20 +156,10 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
     """
     await interaction.response.defer()
 
-    result = get_nikud(text, max_length=500)
+    result = analyze_text(text)
 
     if result.error:
-        error_message = "❌ "
-        if "maximum length" in result.error:
-            error_message += "Text is too long! Please keep it under 500 characters."
-        elif "must contain Hebrew" in result.error:
-            error_message += "Please provide Hebrew text to analyze. Example: `/analyze ספר`"
-        elif "empty" in result.error:
-            error_message += "Please provide some text to analyze. Example: `/analyze ספר`"
-        else:
-            logger.error("Failed to analyze text: %s", result.error)
-            error_message += f"Sorry, there was an issue analyzing your text: {result.error}"
-        await interaction.followup.send(error_message)
+        await handle_hebrew_command_error(interaction, result.error)
         return
 
     # Create an embed for morphological analysis
@@ -240,20 +230,10 @@ async def lemmatize(interaction: discord.Interaction, text: str) -> None:
     """
     await interaction.response.defer()
 
-    result = get_lemmas(text, max_length=500)
+    result = get_lemmas(text)
 
     if result.error:
-        error_message = "❌ "
-        if "maximum length" in result.error:
-            error_message += "Text is too long! Please keep it under 500 characters."
-        elif "must contain Hebrew" in result.error:
-            error_message += "Please provide Hebrew text to lemmatize. Example: `/lemmatize ספרים`"
-        elif "empty" in result.error:
-            error_message += "Please provide some text to lemmatize. Example: `/lemmatize ספרים`"
-        else:
-            logger.error("Failed to lemmatize text: %s", result.error)
-            error_message += f"Sorry, there was an issue processing your text: {result.error}"
-        await interaction.followup.send(error_message)
+        await handle_hebrew_command_error(interaction, result.error)
         return
 
     # Create an embed for the response

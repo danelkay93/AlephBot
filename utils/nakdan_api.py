@@ -243,7 +243,7 @@ def get_lemmas(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakda
         logger.error("Error getting lemmas with Nakdan API: %s", str(e), exc_info=True)
         return NakdanResponse(text="", error=error_msg)
 
-def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> NakdanResponse:
+def get_nikud(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse:
     """
     Sends Hebrew text to the Nakdan API and returns it with niqqud.
     
@@ -257,22 +257,13 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
     """
     try:
         if not text.strip():
-            return NakdanResponse(text="", error="Text cannot be empty")
+            return NakdanResponse(text="", error=ERROR_MESSAGES["empty_text"])
         
         if len(text) > max_length:
-            return NakdanResponse(text="", error=f"Text exceeds maximum length of {max_length} characters")
+            return NakdanResponse(text="", error=ERROR_MESSAGES["text_too_long"])
             
         if not is_hebrew(text):
-            return NakdanResponse(text="", error="Text must contain Hebrew characters")
-        BASE_URL = "https://nakdan-2-0.loadbalancer.dicta.org.il"
-        url = f"{BASE_URL}/api"
-        payload: dict[str, str] = {
-            "data": text,
-            "genre": "modern"  # Options: 'modern', 'poetry', etc.
-        }
-        headers: dict[str, str] = {
-            'Content-Type': 'application/json'
-        }
+            return NakdanResponse(text="", error=ERROR_MESSAGES["non_hebrew"])
         
         data = _call_nakdan_api(text, timeout)
 
