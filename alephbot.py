@@ -211,7 +211,7 @@ async def test_niqqud(interaction: discord.Interaction) -> None:
             f"Text: `{text.string}`",
             f"Normalized: `{text.normalize().string}`",
             f"Without Niqqud: `{text.text_only().string}`",
-            f"Letters Only: `{''.join(c for c in text if c.is_hebrew_letter)}`",
+            f"Letters Only: `{''.join(c for c in str(text) if Hebrew(c).is_hebrew_letter)}`",
             f"Has Niqqud: `{any(c.is_hebrew_niqqud for c in text)}`",
             f"Standard Gematria: `{text.gematria()}`",
             f"Reduced Gematria: `{text.gematria(method=GematriaTypes.MISPAR_KATAN_MISPARI)}`",

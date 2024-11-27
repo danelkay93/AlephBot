@@ -113,7 +113,7 @@ class BotReloader(FileSystemEventHandler):
             
         async with self.restart_lock:  # Prevent multiple simultaneous restarts
             logger.info(f"Detected change in {event.src_path}")
-            self.start_bot()
+            await self.start_bot()
 
     def on_modified(self, event: FileModifiedEvent) -> None:
         """Override watchdog's on_modified to queue events"""
