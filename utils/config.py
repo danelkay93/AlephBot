@@ -1,11 +1,12 @@
 from pathlib import Path
-from pydantic_settings import BaseSettings
+from environs import Env
 
-class Settings(BaseSettings):
-    discord_token: str
-    
-    class Config:
-        env_file = Path("tokens.env")
-        env_file_encoding = 'utf-8'
+# Initialize environs
+env = Env()
+env.read_env(Path("tokens.env"))
+
+class Settings:
+    def __init__(self):
+        self.discord_token: str = env.str("DISCORD_TOKEN")
 
 settings = Settings()
