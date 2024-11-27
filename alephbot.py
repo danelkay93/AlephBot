@@ -353,36 +353,103 @@ async def lemmatize_error(ctx: Context, error: Exception | None) -> None:
         logger.error("Unexpected error in lemmatize command: %s", error)
         await ctx.send("An unexpected error occurred. Please try again later.")
 
+class TranslationView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=180.0)  # 3 minute timeout
+        self.direction = "he-en"
+        self.genre = "modern"
+        self.temperature = 0.0
+        
+    @discord.ui.select(
+        placeholder="Select translation direction",
+        options=[
+            discord.SelectOption(label="Hebrew to English", value="he-en", default=True),
+            discord.SelectOption(label="English to Hebrew", value="en-he")
+        ]
+    )
+    async def direction_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        self.direction = select.values[0]
+        await interaction.response.defer()
+
+    @discord.ui.select(
+        placeholder="Select genre",
+        options=[
+            discord.SelectOption(label="Modern", value="modern", default=True),
+            discord.SelectOption(label="Biblical", value="biblical"),
+            discord.SelectOption(label="Mishnaic", value="mishnaic"),
+            discord.SelectOption(label="Poetic", value="poetic")
+        ]
+    )
+    async def genre_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        self.genre = select.values[0]
+        await interaction.response.defer()
+
+    @discord.ui.button(label="Translate", style=discord.ButtonStyle.primary)
+    async def translate_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Get the message content to translate
+        message = interaction.message
+        if not message or not message.content:
+            await interaction.response.send_message("No text to translate!", ephemeral=True)
+            return
+
+        try:
+            translated_text = await translate_client.translate(
+                text=message.content,
+                direction=self.direction,
+                genre=self.genre,
+                temperature=self.temperature
+            )
+            
+            embed = discord.Embed(
+                title="Translation Result",
+                color=discord.Color.blue()
+            )
+            
+            direction_display = "Hebrew → English" if self.direction == "he-en" else "English → Hebrew"
+            
+            embed.add_field(
+                name="Original Text",
+                value=f"```{message.content}```",
+                inline=False
+            )
+            embed.add_field(
+                name="Translated Text", 
+                value=f"```{translated_text}```",
+                inline=False
+            )
+            embed.add_field(
+                name="Settings",
+                value=(
+                    f"🔄 Direction: {direction_display}\n"
+                    f"📝 Genre: {self.genre}\n"
+                    f"🎲 Temperature: {self.temperature:.2f}"
+                ),
+                inline=True
+            )
+            
+            embed.set_footer(text="Powered by Dicta Translation API • Use /help for more info")
+            
+            await interaction.response.send_message(embed=embed)
+            
+        except Exception as e:
+            logger.error("Translation error: %s", str(e), exc_info=True)
+            error_msg = "An error occurred during translation. Please try again later."
+            if "too many requests" in str(e).lower():
+                error_msg = "Rate limit exceeded. Please wait a moment before trying again."
+            elif "timeout" in str(e).lower():
+                error_msg = "Translation timed out. Please try again with shorter text."
+            
+            await interaction.response.send_message(
+                error_msg,
+                ephemeral=True
+            )
+
 @bot.tree.command(
     name='translate',
     description="Translate text between Hebrew and English"
 )
 @commands.cooldown(1, 30, commands.BucketType.user)
-@app_commands.describe(
-    text="The text to translate",
-    direction="Translation direction (he-en or en-he)",
-    genre="Translation genre (modern, biblical, mishnaic, etc)",
-    temperature="Creativity level (0-1, higher = more creative)"
-)
-@app_commands.choices(
-    genre=[
-        app_commands.Choice(name="Modern", value="modern"),
-        app_commands.Choice(name="Biblical", value="biblical"),
-        app_commands.Choice(name="Mishnaic", value="mishnaic"),
-        app_commands.Choice(name="Poetic", value="poetic")
-    ],
-    direction=[
-        app_commands.Choice(name="Hebrew to English", value="he-en"),
-        app_commands.Choice(name="English to Hebrew", value="en-he")
-    ]
-)
-async def translate(
-    interaction: discord.Interaction,
-    text: str,
-    direction: str,
-    genre: str = "modern",
-    temperature: app_commands.Range[float, 0.0, 1.0] = 0.0
-) -> None:
+async def translate(interaction: discord.Interaction, text: str) -> None:
     """
     Translates text between Hebrew and English using the Dicta Translation API.
     
