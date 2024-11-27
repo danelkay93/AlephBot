@@ -1,7 +1,9 @@
 import logging
 import sys
 import asyncio
+import random
 from pathlib import Path
+from typing import List, Optional
 
 import discord
 from discord.ext import commands
@@ -47,6 +49,78 @@ bot = commands.Bot(command_prefix="/", intents=intents)
 translate_client = DictaTranslateAPI()
 
 # Sync commands on startup
+async def register_commands_with_backoff(commands: List[commands.Command]) -> None:
+    """Register commands with exponential backoff and jitter."""
+    base_delay = 1.0
+    max_delay = 60.0
+    jitter_range = 0.1
+    
+    for cmd in commands:
+        retry_count = 0
+        current_delay = base_delay
+        
+        while True:
+            try:
+                bot.tree.add_command(cmd, override=True)
+                logger.info("Added command: %s", cmd.name)
+                break
+            except discord.HTTPException as e:
+                if e.status == 429:  # Rate limit error
+                    retry_count += 1
+                    # Add jitter to avoid thundering herd
+                    jitter = random.uniform(-jitter_range * current_delay, 
+                                         jitter_range * current_delay)
+                    wait_time = min(current_delay + jitter, max_delay)
+                    
+                    logger.warning("Rate limited while adding %s, waiting %.2f seconds...", 
+                                 cmd.name, wait_time)
+                    await asyncio.sleep(wait_time)
+                    
+                    # Exponential backoff
+                    current_delay = min(current_delay * 2, max_delay)
+                else:
+                    logger.error("HTTP error adding command %s: %s", cmd.name, str(e))
+                    raise
+            except Exception as e:
+                logger.error("Error adding command %s: %s", cmd.name, str(e))
+                raise
+
+async def sync_commands_with_backoff(max_retries: int = 5) -> Optional[List[discord.app_commands.Command]]:
+    """Sync command tree with exponential backoff and jitter."""
+    base_delay = 2.0
+    max_delay = 120.0
+    jitter_range = 0.1
+    
+    for attempt in range(max_retries):
+        try:
+            logger.info("Syncing command tree globally (attempt %d/%d)...", 
+                       attempt + 1, max_retries)
+            synced = await bot.tree.sync()
+            logger.info("Successfully synced %d global commands: %s",
+                       len(synced),
+                       ", ".join(cmd.name for cmd in synced))
+            return synced
+            
+        except discord.HTTPException as e:
+            if e.status == 429 and attempt < max_retries - 1:
+                current_delay = min(base_delay * (2 ** attempt), max_delay)
+                jitter = random.uniform(-jitter_range * current_delay,
+                                     jitter_range * current_delay)
+                wait_time = current_delay + jitter
+                
+                logger.warning("Rate limited during sync, waiting %.2f seconds...", 
+                             wait_time)
+                await asyncio.sleep(wait_time)
+            else:
+                logger.error("HTTP error during sync: %s", str(e))
+                raise
+        except Exception as e:
+            logger.error("Unexpected error during sync: %s", str(e))
+            raise
+    
+    logger.error("Failed to sync after %d attempts", max_retries)
+    return None
+
 @bot.event
 async def setup_hook():
     """Initialize bot and sync commands globally"""
@@ -60,38 +134,11 @@ async def setup_hook():
             lemmatize
         ]
         
-        for cmd in commands_to_add:
-            # Ensure commands are registered globally without guild restrictions
-            bot.tree.add_command(cmd, override=True)
-            logger.info("Added command: %s", cmd.name)
+        # Register commands with backoff
+        await register_commands_with_backoff(commands_to_add)
         
-        # Sync globally with rate limit handling
-        max_retries = 3
-        retry_count = 0
-        while retry_count < max_retries:
-            try:
-                logger.info("Syncing command tree globally (attempt %d/%d)...", retry_count + 1, max_retries)
-                # Explicitly sync globally
-                synced = await bot.tree.sync()
-                logger.info("Successfully synced %d global commands: %s", 
-                          len(synced), 
-                          ", ".join(cmd.name for cmd in synced))
-                break
-            except discord.HTTPException as e:
-                if e.status == 429:  # Rate limit error
-                    retry_count += 1
-                    wait_time = e.retry_after + 1
-                    logger.warning("Rate limited during sync, waiting %.2f seconds...", wait_time)
-                    await asyncio.sleep(wait_time)
-                    if retry_count >= max_retries:
-                        logger.error("Failed to sync after %d attempts", max_retries)
-                        raise
-                else:
-                    logger.error("HTTP error during sync: %s", str(e))
-                    raise
-            except Exception as e:
-                logger.error("Unexpected error during sync: %s", str(e))
-                raise
+        # Sync globally with backoff
+        await sync_commands_with_backoff()
     except Exception as e:
         logger.error("Failed during command registration: %s", e, exc_info=True)
         raise
