@@ -380,7 +380,7 @@ async def translate(
     text: str,
     direction: str,
     genre: str = "modern",
-    temperature: float = app_commands.Range[float, 0.0, 1.0] = 0.0
+    temperature: app_commands.Range[float, 0.0, 1.0] = 0.0
 ) -> None:
     """
     Translates text between Hebrew and English using the Dicta Translation API.
