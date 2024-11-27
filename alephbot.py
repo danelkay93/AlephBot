@@ -84,7 +84,9 @@ async def setup_hook():
         commands_to_add = [
             vowelize,
             analyze,
-            lemmatize
+            lemmatize,
+            translate,
+            invite_link
         ]
         
         # Register all commands at once
