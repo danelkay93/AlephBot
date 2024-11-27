@@ -143,12 +143,18 @@ def _call_nakdan_api(text: str, timeout: float = 10.0) -> list[dict[str, Any]]:
     """
     BASE_URL = "https://nakdan-5-1.loadbalancer.dicta.org.il"
     url = f"{BASE_URL}/api"
-    payload: dict[str, str] = {
+    payload = {
+        "task": "nakdan",
         "data": text,
-        "genre": "modern"
+        "genre": "modern",
+        "addmorph": True,
+        "keepqq": False,
+        "nodageshdefmem": False,
+        "patachma": False,
+        "keepmetagim": True
     }
-    headers: dict[str, str] = {
-        'Content-Type': 'application/json'
+    headers = {
+        'Content-Type': 'text/plain;charset=UTF-8'
     }
     
     # Format Hebrew text for logging
