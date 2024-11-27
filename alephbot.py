@@ -1,5 +1,6 @@
 import logging
 import sys
+import asyncio
 from pathlib import Path
 
 import discord
@@ -41,37 +42,50 @@ async def setup_hook():
     try:
         # Register commands first
         logger.info("Registering commands...")
-        await bot.tree.sync()  # Sync first to clear old commands
         
-        # Add our commands to the tree
-        logger.info("Adding commands to tree...")
+        # Add all commands to the tree before syncing
+        commands_to_add = [
+            vowelize,
+            analyze,
+            lemmatize
+        ]
         
+        for cmd in commands_to_add:
+            if not bot.tree.get_command(cmd.name):
+                bot.tree.add_command(cmd)
+                logger.info("Added command: %s", cmd.name)
+        
+        # Sync with rate limit handling
+        try:
+            logger.info("Syncing command tree...")
+            synced = await bot.tree.sync()
+            logger.info("Successfully synced %d commands", len(synced))
+        except discord.HTTPException as e:
+            if e.status == 429:  # Rate limit error
+                logger.warning("Rate limited during sync, waiting to retry...")
+                await asyncio.sleep(e.retry_after + 1)
+                synced = await bot.tree.sync()
+                logger.info("Retry successful, synced %d commands", len(synced))
+            else:
+                raise
+                
     except Exception as e:
         logger.error("Failed during command registration: %s", e, exc_info=True)
         raise
 
 @bot.event
 async def on_ready():
-    """Handle bot ready event and sync commands"""
+    """Handle bot ready event"""
     logger.info('Bot %s is now online!', bot.user)
     logger.info('Connected to %d guilds:', len(bot.guilds))
     for guild in bot.guilds:
         logger.info('- %s (ID: %s)', guild.name, guild.id)
     
-    # Now that we're ready, sync the commands
-    try:
-        logger.info("Bot is ready, syncing commands globally...")
-        synced = await bot.tree.sync()
-        logger.info("Successfully synced %d commands globally", len(synced))
-    except discord.Forbidden as e:
-        logger.error("Bot lacks permissions to sync commands: %s", e)
-        raise
-    except discord.HTTPException as e:
-        logger.error("HTTP error during global sync: %s", e)
-        raise
-    except Exception as e:
-        logger.error("Unexpected error during command sync: %s", e, exc_info=True)
-        raise
+    # Log registered commands
+    commands = bot.tree.get_commands()
+    logger.info("Currently registered commands:")
+    for cmd in commands:
+        logger.info("- /%s", cmd.name)
 
 @bot.tree.command(name='vowelize', description="Add niqqud to Hebrew text")
 @commands.cooldown(1, 30, commands.BucketType.user)
