@@ -25,6 +25,15 @@ TRANSLATION_GENRES: Dict[str, str] = {
 class DictaTranslateAPI:
     """Client for the Dicta Translation WebSocket API"""
     
+    TRANSLATION_GENRES = {
+        "modern": "Standard modern translation style",
+        "modern-formal": "Formal/professional translation style", 
+        "modern-colloquial": "Casual/conversational style",
+        "biblical": "Biblical/archaic style translation",
+        "technical": "Technical/scientific translation style",
+        "legal": "Legal/official document style"
+    }
+    
     def __init__(self, timeout: float = DEFAULT_TIMEOUT):
         """Initialize the Dicta Translation API client
         
