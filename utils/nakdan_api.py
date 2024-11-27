@@ -195,7 +195,7 @@ def get_lemmas(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MA
         if not is_hebrew(text):
             return NakdanResponse(text="", error=ERROR_MESSAGES["non_hebrew"])
 
-        data = _call_nakdan_api(text, timeout, task="nakdan")
+        data = _call_nakdan_api(text, timeout, task="nakdan-analyze")
         
         # Process API response for lemmatization
         lemmatized_words = []
@@ -208,11 +208,16 @@ def get_lemmas(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MA
                 
                 # Extract lemma from morphological analysis
                 lemma = word  # Default to original word
-                if options and isinstance(options[0], list) and len(options[0]) > 1:
-                    morph_data = options[0][1]
-                    if morph_data and len(morph_data) > 0:
-                        # Get lemma from first morphological analysis
-                        lemma = morph_data[0][1] if len(morph_data[0]) > 1 else word
+                if options and isinstance(options[0], list):
+                    try:
+                        first_option = options[0]
+                        if len(first_option) >= 2 and isinstance(first_option[1], list):
+                            morph_data = first_option[1]
+                            if len(morph_data) >= 1:
+                                # Extract lemma from first element
+                                lemma = morph_data[0][1] if len(morph_data[0]) > 1 else word
+                    except Exception as e:
+                        logger.warning("Failed to parse lemma: %s", e)
                 
                 lemmatized_words.append(lemma)
                 
