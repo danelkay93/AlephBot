@@ -33,7 +33,7 @@ class DictaTranslateAPI:
         self,
         text: str,
         direction: TranslationDirection,
-        genre: str = "modern-fancy",
+        genre: str = "modern",
         temperature: float = 0
     ) -> str:
         """Translate text using the Dicta Translation API
