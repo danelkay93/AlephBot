@@ -1,7 +1,7 @@
 import json
 import asyncio
 import logging
-from typing import Optional, Literal
+from typing import Optional, Literal, Dict
 import websockets
 from websockets.exceptions import WebSocketException
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -12,6 +12,15 @@ logger = logging.getLogger(__name__)
 
 DICTA_WS_URL = "wss://translate.loadbalancer.dicta.org.il/api/ws"
 TranslationDirection = Literal["he-en", "en-he"]
+
+TRANSLATION_GENRES: Dict[str, str] = {
+    "modern": "Standard modern translation style",
+    "modern-formal": "Formal/professional translation style",
+    "modern-colloquial": "Casual/conversational style",
+    "biblical": "Biblical/archaic style translation",
+    "technical": "Technical/scientific translation style",
+    "legal": "Legal/official document style"
+}
 
 class DictaTranslateAPI:
     """Client for the Dicta Translation WebSocket API"""

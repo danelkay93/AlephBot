@@ -309,7 +309,8 @@ async def lemmatize_error(ctx: Context, error: Exception | None) -> None:
 async def translate(
     interaction: discord.Interaction,
     text: str,
-    to_english: bool = True
+    to_english: bool = True,
+    genre: str = "modern"
 ) -> None:
     """
     Translates text between Hebrew and English using the Dicta Translation API.
@@ -326,10 +327,20 @@ async def translate(
     await interaction.response.defer()
     
     try:
+        # Validate genre
+        if genre not in translate_client.TRANSLATION_GENRES:
+            await interaction.followup.send(
+                f"Invalid genre. Available genres:\n" + 
+                "\n".join(f"• `{g}`: {desc}" for g, desc in translate_client.TRANSLATION_GENRES.items()),
+                ephemeral=True
+            )
+            return
+
         direction = "he-en" if to_english else "en-he"
         translated_text = await translate_client.translate(
             text=text,
-            direction=direction
+            direction=direction,
+            genre=genre
         )
         
         # Create embed for translation result
@@ -342,7 +353,7 @@ async def translate(
         # Add translation direction
         embed.add_field(
             name="Direction",
-            value=f"🔄 {'Hebrew → English' if to_english else 'English → Hebrew'}",
+            value=f"🔄 {'Hebrew → English' if to_english else 'English → Hebrew'}\n📝 Genre: {genre}",
             inline=True
         )
             
