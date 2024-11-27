@@ -1,21 +1,17 @@
 from typing import Any
-import re
 import httpx
 import logging
-from attrs import define
 from tenacity import retry, stop_after_attempt, wait_exponential
-from hebrew import Hebrew, GematriaTypes
+from hebrew import Hebrew
+
+from .models import NakdanResponse, NakdanAPIPayload, MorphologicalFeatures
+from .hebrew_constants import (
+    NAKDAN_BASE_URL, MAX_TEXT_LENGTH, DEFAULT_TIMEOUT,
+    HebrewFeatures, ERROR_MESSAGES
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-@define
-class NakdanResponse:
-    text: str
-    error: str | None = None
-    lemmas: list[str] = []
-    pos_tags: list[str] = []
-    word_analysis: list[dict[str, Any]] = []
 
 def analyze_text(text: str, timeout: float = 10.0, max_length: int = 500) -> NakdanResponse:
     """
@@ -31,13 +27,13 @@ def analyze_text(text: str, timeout: float = 10.0, max_length: int = 500) -> Nak
     """
     try:
         if not text.strip():
-            return NakdanResponse(text="", error="Text cannot be empty")
+            return NakdanResponse(text="", error=ERROR_MESSAGES["empty_text"])
         
-        if len(text) > max_length:
-            return NakdanResponse(text="", error=f"Text exceeds maximum length of {max_length} characters")
+        if len(text) > MAX_TEXT_LENGTH:
+            return NakdanResponse(text="", error=ERROR_MESSAGES["text_too_long"])
             
         if not is_hebrew(text):
-            return NakdanResponse(text="", error="Text must contain Hebrew characters")
+            return NakdanResponse(text="", error=ERROR_MESSAGES["non_hebrew"])
 
         data = _call_nakdan_api(text, timeout, task="nakdan-analyze")
         
@@ -129,13 +125,14 @@ def is_hebrew(text: str) -> bool:
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=4, max=10)
 )
-def _call_nakdan_api(text: str, timeout: float = 10.0, task: str = "nakdan") -> list[dict[str, Any]]:
+def _call_nakdan_api(text: str, timeout: float = DEFAULT_TIMEOUT, task: str = "nakdan") -> list[dict[str, Any]]:
     """
     Makes the actual API call to Nakdan service.
     
     Args:
         text: The Hebrew text to process
         timeout: Maximum time in seconds to wait for API response
+        task: API task to perform
         
     Returns:
         Raw API response data
@@ -143,18 +140,11 @@ def _call_nakdan_api(text: str, timeout: float = 10.0, task: str = "nakdan") -> 
     Raises:
         httpx.HTTPError: If the API request fails
     """
-    BASE_URL = "https://nakdan-2-0.loadbalancer.dicta.org.il"
-    url = f"{BASE_URL}/api"
-    payload = {
-        "task": task,
-        "data": text,
-        "genre": "modern",
-        "addmorph": True,
-        "keepqq": False,
-        "nodageshdefmem": False,
-        "patachma": False,
-        "keepmetagim": True
-    }
+    url = f"{NAKDAN_BASE_URL}/api"
+    payload = NakdanAPIPayload(
+        task=task,
+        data=text
+    ).model_dump()
     headers = {
         'Content-Type': 'text/plain;charset=UTF-8'
     }
