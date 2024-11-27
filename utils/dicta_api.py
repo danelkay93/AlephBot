@@ -77,8 +77,9 @@ class DictaTranslateAPI:
                 # Send translation request
                 request = {
                     "text": text,
-                    "genre": genre,
                     "direction": direction,
+                    "genre": genre,
+                    "style": genre,  # API requires both genre and style
                     "temperature": temperature
                 }
                 await ws.send(json.dumps(request))

@@ -431,7 +431,10 @@ class TranslationView(discord.ui.View):
             
             embed.set_footer(text="Powered by Dicta Translation API • Use /help for more info")
             
-            await interaction.response.send_message(embed=embed)
+            try:
+                await interaction.response.send_message(embed=embed)
+            except discord.InteractionResponded:
+                await interaction.followup.send(embed=embed)
             
         except Exception as e:
             logger.error("Translation error: %s", str(e), exc_info=True)
