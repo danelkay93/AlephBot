@@ -71,22 +71,32 @@ class DictaTranslateAPI:
                 while True:
                     try:
                         response = await ws.recv()
-                        data = json.loads(response)
                         
-                        logger.debug("Received WebSocket message: %r", data)
+                        # Skip empty responses
+                        if not response.strip():
+                            continue
+                            
+                        logger.debug("Received WebSocket message: %r", response)
                         
-                        # Handle different message types
-                        if isinstance(data, list):
-                            # Translation chunk
-                            for chunk in data:
-                                if "out" in chunk:
-                                    translated_chunks.append(chunk["out"])
-                        elif isinstance(data, dict):
-                            if data.get("stage") == "done":
-                                break
-                            elif data.get("type") == "ping":
-                                # Send pong response
-                                await ws.send(json.dumps({"type": "pong"}))
+                        try:
+                            data = json.loads(response)
+                            
+                            # Handle different message types
+                            if isinstance(data, list):
+                                # Translation chunk
+                                for chunk in data:
+                                    if isinstance(chunk, dict) and "out" in chunk:
+                                        translated_chunks.append(chunk["out"])
+                            elif isinstance(data, dict):
+                                if data.get("stage") == "done":
+                                    break
+                                elif data.get("type") == "ping":
+                                    # Send pong response
+                                    await ws.send(json.dumps({"type": "pong"}))
+                        except json.JSONDecodeError:
+                            # Handle partial/chunked JSON responses
+                            logger.debug("Received partial JSON chunk, skipping: %r", response)
+                            continue
                             
                     except asyncio.TimeoutError:
                         raise ValueError("Translation timed out")

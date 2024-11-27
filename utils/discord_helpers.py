@@ -6,13 +6,23 @@ from discord.ext.commands import Context
 
 logger = logging.getLogger(__name__)
 
-async def handle_command_error(ctx: Context, error: Exception | None) -> None:
+async def handle_command_error(ctx: Context | Interaction, error: Exception | None) -> None:
     """Unified error handler for bot commands"""
+    error_msg = "An unexpected error occurred. Please try again later."
+    
     if isinstance(error, commands.CommandOnCooldown):
-        await ctx.send(f"Please wait {error.retry_after:.1f} seconds before using this command again.")
+        error_msg = f"Please wait {error.retry_after:.1f} seconds before using this command again."
     else:
         logger.error("Unexpected error in command: %s", error)
-        await ctx.send("An unexpected error occurred. Please try again later.")
+    
+    # Handle both Context and Interaction objects
+    if isinstance(ctx, Interaction):
+        if ctx.response.is_done():
+            await ctx.followup.send(error_msg)
+        else:
+            await ctx.response.send_message(error_msg)
+    else:
+        await ctx.send(error_msg)
 
 def create_hebrew_embed(
     title: str,
