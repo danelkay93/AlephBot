@@ -12,10 +12,19 @@ import logging
 from typing import Optional
 from asyncio.subprocess import Process
 
+# Configure root logger
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('bot.log', encoding='utf-8')
+    ]
 )
+
+# Suppress noisy loggers
+logging.getLogger('discord').setLevel(logging.WARNING)
+logging.getLogger('watchdog').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 class BotReloader(FileSystemEventHandler):
@@ -72,28 +81,30 @@ class BotReloader(FileSystemEventHandler):
         if not self.process or not self.process.stdout or not self.process.stderr:
             return
 
-        while True:
-            try:
-                # Read stdout
-                line = await self.process.stdout.readline()
-                if line:
-                    logger.info(f"Bot: {line.decode().strip()}")
-                
-                # Read stderr
-                err_line = await self.process.stderr.readline()
-                if err_line:
-                    logger.error(f"Bot Error: {err_line.decode().strip()}")
-                
-                # Check if process has terminated
-                if self.process.returncode is not None:
+        async def read_stream(stream, level):
+            while True:
+                line = await stream.readline()
+                if not line:
                     break
-                    
-                if not line and not err_line:
-                    await asyncio.sleep(0.1)
-                    
-            except Exception as e:
-                logger.error(f"Error monitoring output: {e}")
-                await asyncio.sleep(1)
+                msg = line.decode().strip()
+                if msg:
+                    if level == logging.ERROR:
+                        logger.error("Bot Error: %s", msg)
+                    else:
+                        logger.info("Bot: %s", msg)
+
+        try:
+            # Create tasks to read both streams concurrently
+            stdout_task = asyncio.create_task(read_stream(self.process.stdout, logging.INFO))
+            stderr_task = asyncio.create_task(read_stream(self.process.stderr, logging.ERROR))
+            
+            # Wait for process to complete and streams to be fully read
+            await self.process.wait()
+            await stdout_task
+            await stderr_task
+            
+        except Exception as e:
+            logger.error("Error monitoring output: %s", e, exc_info=True)
 
     async def handle_modified(self, event: FileModifiedEvent) -> None:
         """Handle file modification events with debouncing"""
