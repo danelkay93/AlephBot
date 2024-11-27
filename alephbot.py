@@ -10,6 +10,7 @@ from discord import Embed, Color
 
 from utils.config import settings
 from utils.nakdan_api import get_nikud, analyze_text, get_lemmas
+from utils.deepl_api import DeepLAPI
 from utils.discord_helpers import (
     handle_command_error,
     create_hebrew_embed,
@@ -41,6 +42,9 @@ intents.message_content = True  # Enable message content intent
 intents.messages = True  # Enable messages intent
 
 bot = commands.Bot(command_prefix="/", intents=intents)
+
+# Initialize DeepL API client
+deepl_client = DeepLAPI(settings.deepl_token)
 
 # Sync commands on startup
 @bot.event
@@ -272,6 +276,77 @@ async def lemmatize_error(ctx: Context, error: Exception | None) -> None:
         await ctx.send(f"Please wait {error.retry_after:.1f} seconds before using this command again.")
     else:
         logger.error("Unexpected error in lemmatize command: %s", error)
+        await ctx.send("An unexpected error occurred. Please try again later.")
+
+@bot.tree.command(name='translate', description="Translate text between languages")
+@commands.cooldown(1, 30, commands.BucketType.user)
+async def translate(
+    interaction: discord.Interaction,
+    text: str,
+    target_lang: str,
+    source_lang: str = None,
+    formality: str = None
+) -> None:
+    """
+    Translates text using the DeepL API.
+    
+    Args:
+        text: Text to translate
+        target_lang: Target language code (e.g. 'EN-US', 'HE')
+        source_lang: Source language code (optional)
+        formality: Desired formality ('more', 'less', or None)
+    """
+    logger.info("Translate command received from %s#%s (%s)", 
+                interaction.user.name,
+                interaction.user.discriminator,
+                interaction.user.id)
+    
+    await interaction.response.defer()
+    
+    try:
+        translated_text = await deepl_client.translate(
+            text=text,
+            target_lang=target_lang.upper(),
+            source_lang=source_lang.upper() if source_lang else None,
+            formality=formality
+        )
+        
+        # Create embed for translation result
+        embed = Embed(
+            title="Translation Result",
+            color=Color.blue(),
+            description=f"**Original Text:**\n```{text}```\n\n**Translated Text:**\n```{translated_text}```"
+        )
+        
+        # Add language information
+        embed.add_field(
+            name="Languages",
+            value=f"🔄 {source_lang or 'Auto'} ➡️ {target_lang}",
+            inline=True
+        )
+        
+        if formality:
+            embed.add_field(
+                name="Formality",
+                value=f"📝 {formality}",
+                inline=True
+            )
+            
+        embed.set_footer(text="Powered by DeepL API")
+        
+        await interaction.followup.send(embed=embed)
+        
+    except Exception as e:
+        logger.error("Translation error: %s", str(e))
+        await handle_command_error(interaction, f"Translation failed: {str(e)}")
+
+@translate.error
+async def translate_error(ctx: Context, error: Exception | None) -> None:
+    """Handle errors in the translate command"""
+    if isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(f"Please wait {error.retry_after:.1f} seconds before using this command again.")
+    else:
+        logger.error("Unexpected error in translate command: %s", error)
         await ctx.send("An unexpected error occurred. Please try again later.")
 
 
