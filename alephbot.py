@@ -36,15 +36,10 @@ bot = commands.Bot(command_prefix="/", intents=intents)
 # Sync commands on startup
 @bot.event
 async def setup_hook():
-    """Initialize bot and sync commands"""
+    """Initialize bot and sync commands globally"""
     logger.info("Bot setup starting...")
     try:
-        # Clear existing commands first
-        logger.info("Clearing existing commands...")
-        bot.tree.clear_commands(guild=None)
-        await bot.tree.sync()
-        
-        # Register new commands
+        # Register commands
         logger.info("Registering commands...")
         commands_to_add = [
             vowelize,
@@ -53,34 +48,31 @@ async def setup_hook():
         ]
         
         for cmd in commands_to_add:
-            bot.tree.add_command(cmd)
+            # Ensure commands are registered globally without guild restrictions
+            bot.tree.add_command(cmd, override=True)
             logger.info("Added command: %s", cmd.name)
         
-        # Sync with rate limit handling and timeout
+        # Sync globally with rate limit handling
         max_retries = 3
         retry_count = 0
         while retry_count < max_retries:
             try:
-                logger.info("Syncing command tree (attempt %d/%d)...", retry_count + 1, max_retries)
-                # Add timeout to sync operation
-                async with asyncio.timeout(30):  # 30 second timeout
-                    synced = await bot.tree.sync()
-                    logger.info("Successfully synced %d commands: %s", 
-                              len(synced), 
-                              ", ".join(cmd.name for cmd in synced))
-                    break
-            except asyncio.TimeoutError:
-                retry_count += 1
-                logger.warning("Sync operation timed out (attempt %d/%d)", retry_count, max_retries)
-                if retry_count >= max_retries:
-                    logger.error("Failed to sync commands after %d attempts", max_retries)
-                    raise
+                logger.info("Syncing command tree globally (attempt %d/%d)...", retry_count + 1, max_retries)
+                # Explicitly sync globally
+                synced = await bot.tree.sync()
+                logger.info("Successfully synced %d global commands: %s", 
+                          len(synced), 
+                          ", ".join(cmd.name for cmd in synced))
+                break
             except discord.HTTPException as e:
-                if e.status == 429 and retry_count < max_retries - 1:  # Rate limit error
+                if e.status == 429:  # Rate limit error
                     retry_count += 1
                     wait_time = e.retry_after + 1
                     logger.warning("Rate limited during sync, waiting %.2f seconds...", wait_time)
                     await asyncio.sleep(wait_time)
+                    if retry_count >= max_retries:
+                        logger.error("Failed to sync after %d attempts", max_retries)
+                        raise
                 else:
                     logger.error("HTTP error during sync: %s", str(e))
                     raise
@@ -313,6 +305,23 @@ async def lemmatize_error(ctx: Context, error: Exception | None) -> None:
         logger.error("Unexpected error in lemmatize command: %s", error)
         await ctx.send("An unexpected error occurred. Please try again later.")
 
+
+@bot.command(name='invite')
+@commands.is_owner()
+async def invite_link(ctx: commands.Context):
+    """Get the bot's invite link with proper scopes"""
+    app_info = await bot.application_info()
+    permissions = discord.Permissions(
+        send_messages=True,
+        embed_links=True,
+        use_external_emojis=True
+    )
+    invite = discord.utils.oauth_url(
+        app_info.id,
+        permissions=permissions,
+        scopes=('bot', 'applications.commands')
+    )
+    await ctx.send(f"Bot invite link with required scopes:\n{invite}")
 
 # Run the bot
 try:
