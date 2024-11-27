@@ -38,22 +38,34 @@ bot = commands.Bot(command_prefix="/", intents=intents)  # Using "/" as prefix f
 async def setup_hook():
     """Initialize bot and sync commands"""
     logger.info("Bot setup starting...")
-    
-    # Wait for bot to be ready before syncing
-    if not bot.is_ready():
-        logger.info("Waiting for bot to be ready...")
-        await bot.wait_until_ready()
-    
-    logger.info("Syncing commands globally...")
     try:
-        # Clear existing commands first
+        # Register commands first
+        logger.info("Registering commands...")
         bot.tree.clear_commands(guild=None)
-        logger.info("Cleared existing global commands")
         
-        # Sync global commands
+        # Add commands to the command tree
+        logger.info("Adding commands to tree...")
+        
+        # Sync will happen automatically when bot is ready
+        logger.info("Commands registered, waiting for ready event to sync...")
+        
+    except Exception as e:
+        logger.error("Failed during command registration: %s", e, exc_info=True)
+        raise
+
+@bot.event
+async def on_ready():
+    """Handle bot ready event and sync commands"""
+    logger.info('Bot %s is now online!', bot.user)
+    logger.info('Connected to %d guilds:', len(bot.guilds))
+    for guild in bot.guilds:
+        logger.info('- %s (ID: %s)', guild.name, guild.id)
+    
+    # Now that we're ready, sync the commands
+    try:
+        logger.info("Bot is ready, syncing commands globally...")
         synced = await bot.tree.sync()
         logger.info("Successfully synced %d commands globally", len(synced))
-        
     except discord.Forbidden as e:
         logger.error("Bot lacks permissions to sync commands: %s", e)
         raise
@@ -61,10 +73,8 @@ async def setup_hook():
         logger.error("HTTP error during global sync: %s", e)
         raise
     except Exception as e:
-        logger.error("Unexpected error during setup: %s", e, exc_info=True)
+        logger.error("Unexpected error during command sync: %s", e, exc_info=True)
         raise
-    
-    logger.info("Bot setup completed successfully")
 
 @bot.event
 async def on_ready():
