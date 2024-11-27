@@ -187,58 +187,6 @@ async def analyze_error(ctx: Context, error: Exception | None) -> None:
         logger.error("Unexpected error in analyze command: %s", error)
         await ctx.send("An unexpected error occurred. Please try again later.")
 
-@bot.tree.command(name='test-niqqud', description="Test Hebrew text features and analysis")
-async def test_niqqud(interaction: discord.Interaction) -> None:
-    """
-    Comprehensive test of Hebrew text features including niqqud, gematria, and text analysis.
-    """
-    from hebrew import Hebrew, gematria, GematriaTypes
-
-    test_cases = [
-        ("Basic Niqqud", Hebrew("שָׁלוֹם")),
-        ("Dagesh", Hebrew("אִמָּא")),
-        ("Multiple Marks", Hebrew("בְּרֵאשִׁית")),
-        ("Special Cases", Hebrew("יְרוּשָׁלַ\u05B4ים")),
-        ("Mixed Text", Hebrew("Hello שָׁלוֹם")),
-        ("Full Verse", Hebrew("וַיֹּ֥אמֶר אֱלֹהִ֖ים יְהִ֣י א֑וֹר"))
-    ]
-    
-    embed = Embed(
-        title="Hebrew Text Analysis",
-        color=Color.gold(),
-        description="Comprehensive analysis of Hebrew text features:\n\n"
-    )
-
-    for name, text in test_cases:
-        analysis = [
-            f"**{name}**",
-            f"Text: `{text.string}`",
-            f"Normalized: `{text.normalize().string}`",
-            f"Without Niqqud: `{text.text_only().string}`",
-            f"Letters Only: `{''.join(c for c in str(text) if Hebrew(c).is_hebrew_letter)}`",
-            f"Has Niqqud: `{any(c.is_hebrew_niqqud for c in text)}`",
-            f"Standard Gematria: `{text.gematria()}`",
-            f"Reduced Gematria: `{text.gematria(method=GematriaTypes.MISPAR_KATAN_MISPARI)}`",
-            f"Graphemes: `{' | '.join(str(g) for g in text.graphemes)}`",
-            f"Letter Count: `{sum(1 for c in text if c.is_hebrew_letter)}`",
-            "➖➖➖"
-        ]
-        embed.description += "\n".join(analysis) + "\n\n"
-
-    embed.add_field(
-        name="Feature Details",
-        value=(
-            "• Normalization: Standardizes Unicode representation\n"
-            "• Text Only: Removes all niqqud and marks\n"
-            "• Gematria: Numerical value of Hebrew letters\n"
-            "• Graphemes: Complete characters with combining marks\n"
-            "• Letter Analysis: Counts and categorizes characters"
-        ),
-        inline=False
-    )
-    
-    embed.set_footer(text="Unicode preservation test for Hebrew text")
-    await interaction.response.send_message(embed=embed)
 
 @bot.tree.command(name='lemmatize', description="Get the base/root form of Hebrew words")
 @commands.cooldown(1, 30, commands.BucketType.user)
@@ -302,34 +250,6 @@ async def lemmatize_error(ctx: Context, error: Exception | None) -> None:
         logger.error("Unexpected error in lemmatize command: %s", error)
         await ctx.send("An unexpected error occurred. Please try again later.")
 
-@bot.tree.command(name='vowelize-help', description="Get help with viewing vowelized Hebrew text")
-async def vowelize_help(interaction: discord.Interaction) -> None:
-    """
-    Provides help information about viewing vowelized Hebrew text correctly.
-    """
-    embed = Embed(
-        title="How to View Hebrew Vowel Marks (Niqqud)",
-        color=Color.blue(),
-        description=(
-            "If you can't see the vowel marks (niqqud) properly, try these steps:\n\n"
-            "**1. Use a Compatible Font**\n"
-            "• Segoe UI\n"
-            "• Arial\n"
-            "• Times New Roman\n\n"
-            "**2. Discord Settings**\n"
-            "• Open Discord Settings\n"
-            "• Go to App Settings → Appearance\n"
-            "• Under 'Chat Font', select one of the compatible fonts\n\n"
-            "**3. System Settings**\n"
-            "• Make sure Hebrew language support is installed on your system\n"
-            "• Try updating your system fonts\n\n"
-            "**Test Text:**\n"
-            "`שָׁלוֹם`\n"
-            "*(You should see dots and lines above and below the letters)*"
-        )
-    )
-    embed.set_footer(text="If issues persist, try viewing on a different device or browser")
-    await interaction.response.send_message(embed=embed)
 
 # Run the bot
 try:
