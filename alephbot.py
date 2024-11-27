@@ -25,8 +25,12 @@ logging.getLogger('httpx').setLevel(logging.WARNING)
 logging.getLogger('httpcore').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
-# Initialize bot with slash commands
-intents = discord.Intents(messages=True)
+# Initialize bot with required intents
+intents = discord.Intents.default()
+intents.message_content = True  # Enable message content intent
+intents.guilds = True  # Enable guilds intent
+intents.messages = True  # Enable messages intent
+
 bot = commands.Bot(command_prefix="/", intents=intents)  # Using "/" as prefix for consistency with slash commands
 
 # Sync commands on startup
