@@ -43,10 +43,19 @@ async def setup_hook():
         logger.info("Registering commands...")
         bot.tree.clear_commands(guild=None)
         
-        # Add commands to the command tree
-        logger.info("Adding commands to tree...")
+        # Define our active commands
+        active_commands = {
+            'vowelize',
+            'analyze', 
+            'lemmatize'
+        }
         
-        # Sync will happen automatically when bot is ready
+        # Remove any commands that aren't in our active set
+        for command in bot.tree.get_commands():
+            if command.name not in active_commands:
+                logger.info(f"Removing old command: {command.name}")
+                bot.tree.remove_command(command.name)
+        
         logger.info("Commands registered, waiting for ready event to sync...")
         
     except Exception as e:
