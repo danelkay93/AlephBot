@@ -160,8 +160,10 @@ def _call_nakdan_api(text: str, timeout: float = 10.0) -> list[dict[str, Any]]:
     }
     
     # Format Hebrew text for logging
-    logger.info("Nakdan API Request - URL: %s | Payload: %r", 
-               url, payload)
+    # Safely encode Hebrew text for logging
+    safe_text = ' '.join(f"U+{ord(c):04X}" for c in text)
+    logger.info("Nakdan API Request - URL: %s | Text: %s | Payload: %r", 
+               url, safe_text, payload)
     
     with httpx.Client(timeout=timeout) as client:
         response = client.post(url, json=payload, headers=headers)
