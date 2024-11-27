@@ -86,7 +86,7 @@ async def setup_hook():
             analyze,
             lemmatize,
             translate,
-            invite_link
+            invite
         ]
         
         # Register all commands at once
@@ -368,7 +368,7 @@ async def translate_error(ctx: Context, error: Exception | None) -> None:
     name='invite',
     description="Get an invite link to add the bot to your server"
 )
-async def invite_link(interaction: discord.Interaction) -> None:
+async def invite(interaction: discord.Interaction) -> None:
     """Generate an invite link with required permissions."""
     try:
         app_info = await bot.application_info()
@@ -427,7 +427,7 @@ async def invite_link(interaction: discord.Interaction) -> None:
             ephemeral=True
         )
 
-@invite_link.error
+@invite.error
 async def invite_error(ctx: Context, error: Exception) -> None:
     """Handle errors in the invite command"""
     logger.error("Error in invite command: %s", str(error))
