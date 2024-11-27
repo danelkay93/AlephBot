@@ -41,22 +41,10 @@ async def setup_hook():
     try:
         # Register commands first
         logger.info("Registering commands...")
-        bot.tree.clear_commands(guild=None)
+        await bot.tree.sync()  # Sync first to clear old commands
         
-        # Define our active commands
-        active_commands = {
-            'vowelize',
-            'analyze', 
-            'lemmatize'
-        }
-        
-        # Remove any commands that aren't in our active set
-        for command in bot.tree.get_commands():
-            if command.name not in active_commands:
-                logger.info(f"Removing old command: {command.name}")
-                bot.tree.remove_command(command.name)
-        
-        logger.info("Commands registered, waiting for ready event to sync...")
+        # Add our commands to the tree
+        logger.info("Adding commands to tree...")
         
     except Exception as e:
         logger.error("Failed during command registration: %s", e, exc_info=True)
@@ -84,13 +72,6 @@ async def on_ready():
     except Exception as e:
         logger.error("Unexpected error during command sync: %s", e, exc_info=True)
         raise
-
-@bot.event
-async def on_ready():
-    logger.info('Bot %s is now online!', bot.user)
-    logger.info('Connected to %d guilds:', len(bot.guilds))
-    for guild in bot.guilds:
-        logger.info('- %s (ID: %s)', guild.name, guild.id)
 
 @bot.tree.command(name='vowelize', description="Add niqqud to Hebrew text")
 @commands.cooldown(1, 30, commands.BucketType.user)
