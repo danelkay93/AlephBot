@@ -117,7 +117,15 @@ class BotReloader(FileSystemEventHandler):
 
     def on_modified(self, event: FileModifiedEvent) -> None:
         """Override watchdog's on_modified to queue events"""
-        if event.src_path.endswith('.py'):
+        # Only watch specific bot-related files
+        watched_files = {
+            'alephbot.py',
+            str(Path('utils/nakdan_api.py')),
+            str(Path('utils/config.py')),
+            str(Path('utils/hebrew.py'))
+        }
+        if any(event.src_path.endswith(file) for file in watched_files):
+            logger.info(f"Detected change in watched file: {event.src_path}")
             self.event_queue.put(event)
 
 async def process_events(event_queue: Queue, reloader: BotReloader) -> None:
@@ -139,7 +147,11 @@ async def main() -> None:
     event_queue: Queue = Queue()
     event_handler = BotReloader(event_queue)
     observer = Observer()
-    observer.schedule(event_handler, path=str(path), recursive=True)
+    # Watch only the main directory and utils subdirectory
+    observer.schedule(event_handler, path=str(path), recursive=False)
+    utils_path = path / 'utils'
+    if utils_path.exists():
+        observer.schedule(event_handler, path=str(utils_path), recursive=False)
     observer.start()
 
     try:
