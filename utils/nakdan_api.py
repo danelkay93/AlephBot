@@ -13,7 +13,7 @@ from .hebrew_constants import (
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-def analyze_text(text: str, timeout: float = 10.0, max_length: int = 500) -> NakdanResponse:
+def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse:
     """
     Analyzes Hebrew text and returns morphological information.
     
@@ -187,13 +187,13 @@ def get_lemmas(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakda
     """
     try:
         if not text.strip():
-            return NakdanResponse(text="", error="Text cannot be empty")
+            return NakdanResponse(text="", error=ERROR_MESSAGES["empty_text"])
         
         if len(text) > max_length:
-            return NakdanResponse(text="", error=f"Text exceeds maximum length of {max_length} characters")
+            return NakdanResponse(text="", error=ERROR_MESSAGES["text_too_long"])
             
         if not is_hebrew(text):
-            return NakdanResponse(text="", error="Text must contain Hebrew characters")
+            return NakdanResponse(text="", error=ERROR_MESSAGES["non_hebrew"])
 
         data = _call_nakdan_api(text, timeout, task="nakdan")
         
