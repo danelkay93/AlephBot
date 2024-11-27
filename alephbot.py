@@ -38,10 +38,11 @@ logging.getLogger('httpx').setLevel(logging.WARNING)
 logging.getLogger('httpcore').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
-# Initialize bot with minimal required intents
+# Initialize bot with required intents
 intents = discord.Intents.default()
 intents.message_content = True  # Enable message content intent
 intents.messages = True  # Enable messages intent
+intents.dm_messages = True  # Enable DM messages
 
 bot = commands.Bot(command_prefix="/", intents=intents)
 
@@ -409,22 +410,74 @@ async def translate_error(ctx: Context, error: Exception | None) -> None:
         await ctx.send("An unexpected error occurred. Please try again later.")
 
 
-@bot.command(name='invite')
-@commands.is_owner()
-async def invite_link(ctx: commands.Context):
-    """Get the bot's invite link with proper scopes"""
-    app_info = await bot.application_info()
-    permissions = discord.Permissions(
-        send_messages=True,
-        embed_links=True,
-        use_external_emojis=True
-    )
-    invite = discord.utils.oauth_url(
-        app_info.id,
-        permissions=permissions,
-        scopes=('bot', 'applications.commands')
-    )
-    await ctx.send(f"Bot invite link with required scopes:\n{invite}")
+@bot.tree.command(
+    name='invite',
+    description="Get an invite link to add the bot to your server"
+)
+async def invite_link(interaction: discord.Interaction) -> None:
+    """Generate an invite link with required permissions."""
+    try:
+        app_info = await bot.application_info()
+        
+        # Calculate required permissions
+        permissions = discord.Permissions(
+            # Message Permissions
+            send_messages=True,
+            send_messages_in_threads=True,
+            embed_links=True,
+            attach_files=True,
+            read_message_history=True,
+            use_external_emojis=True,
+            add_reactions=True,
+            
+            # Application Command Permissions
+            use_application_commands=True,
+            
+            # View Permissions
+            view_channel=True
+        )
+        
+        # Generate invite URL with proper scopes
+        invite = discord.utils.oauth_url(
+            app_info.id,
+            permissions=permissions,
+            scopes=('bot', 'applications.commands')
+        )
+        
+        # Create an informative embed
+        embed = Embed(
+            title="🔗 Invite AlephBot to Your Server",
+            color=Color.blue(),
+            description=(
+                "Click the link below to add AlephBot to your Discord server:\n\n"
+                f"[➡️ Click here to invite AlephBot]({invite})\n\n"
+                "**Required Permissions:**\n"
+                "• Send Messages\n"
+                "• Use Slash Commands\n"
+                "• Embed Links\n"
+                "• Use External Emojis\n"
+                "• Add Reactions\n\n"
+                "*Note: Make sure you have the 'Manage Server' permission to add bots.*"
+            )
+        )
+        
+        embed.set_footer(text="Thank you for using AlephBot! 🙏")
+        
+        # Send response
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+    except Exception as e:
+        logger.error("Failed to generate invite link: %s", str(e))
+        await interaction.response.send_message(
+            "Sorry, I couldn't generate an invite link. Please try again later.",
+            ephemeral=True
+        )
+
+@invite_link.error
+async def invite_error(ctx: Context, error: Exception) -> None:
+    """Handle errors in the invite command"""
+    logger.error("Error in invite command: %s", str(error))
+    await ctx.send("Sorry, I couldn't generate an invite link. Please try again later.")
 
 # Run the bot
 try:
