@@ -65,16 +65,38 @@ class BotReloader(FileSystemEventHandler):
         env = os.environ.copy()
         env['PYTHONUNBUFFERED'] = '1'  # Ensure output is not buffered
         
-        self.process = await asyncio.create_subprocess_exec(
-            sys.executable,
-            "alephbot.py",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            env=env
-        )
-        
-        # Start output monitoring
-        asyncio.create_task(self.monitor_output())
+        try:
+            # Add timeout to process startup
+            async with asyncio.timeout(60):  # 60 second timeout for startup
+                self.process = await asyncio.create_subprocess_exec(
+                    sys.executable,
+                    "alephbot.py",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=env
+                )
+                
+                if self.process.returncode is not None:
+                    raise RuntimeError(f"Bot process exited immediately with code {self.process.returncode}")
+                
+                # Start output monitoring
+                asyncio.create_task(self.monitor_output())
+                
+                # Wait for initial setup to complete
+                logger.info("Waiting for bot setup to complete...")
+                await asyncio.sleep(5)  # Give the bot time to initialize
+                
+                if self.process.returncode is not None:
+                    raise RuntimeError(f"Bot process terminated during setup with code {self.process.returncode}")
+                
+        except asyncio.TimeoutError:
+            logger.error("Bot startup timed out after 60 seconds")
+            await self.cleanup()
+            raise
+        except Exception as e:
+            logger.error("Failed to start bot process: %s", str(e))
+            await self.cleanup()
+            raise
 
     async def monitor_output(self) -> None:
         """Monitor bot process output and log it"""

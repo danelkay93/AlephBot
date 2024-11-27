@@ -56,17 +56,25 @@ async def setup_hook():
             bot.tree.add_command(cmd)
             logger.info("Added command: %s", cmd.name)
         
-        # Sync with rate limit handling
+        # Sync with rate limit handling and timeout
         max_retries = 3
         retry_count = 0
         while retry_count < max_retries:
             try:
                 logger.info("Syncing command tree (attempt %d/%d)...", retry_count + 1, max_retries)
-                synced = await bot.tree.sync()
-                logger.info("Successfully synced %d commands: %s", 
-                          len(synced), 
-                          ", ".join(cmd.name for cmd in synced))
-                break
+                # Add timeout to sync operation
+                async with asyncio.timeout(30):  # 30 second timeout
+                    synced = await bot.tree.sync()
+                    logger.info("Successfully synced %d commands: %s", 
+                              len(synced), 
+                              ", ".join(cmd.name for cmd in synced))
+                    break
+            except asyncio.TimeoutError:
+                retry_count += 1
+                logger.warning("Sync operation timed out (attempt %d/%d)", retry_count, max_retries)
+                if retry_count >= max_retries:
+                    logger.error("Failed to sync commands after %d attempts", max_retries)
+                    raise
             except discord.HTTPException as e:
                 if e.status == 429 and retry_count < max_retries - 1:  # Rate limit error
                     retry_count += 1
@@ -74,7 +82,11 @@ async def setup_hook():
                     logger.warning("Rate limited during sync, waiting %.2f seconds...", wait_time)
                     await asyncio.sleep(wait_time)
                 else:
+                    logger.error("HTTP error during sync: %s", str(e))
                     raise
+            except Exception as e:
+                logger.error("Unexpected error during sync: %s", str(e))
+                raise
     except Exception as e:
         logger.error("Failed during command registration: %s", e, exc_info=True)
         raise
