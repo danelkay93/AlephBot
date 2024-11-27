@@ -86,7 +86,6 @@ class DictaTranslateAPI:
                 
                 # Process response chunks
                 translated_chunks = []
-                current_json = ""
                 translation_complete = False
                 
                 while not translation_complete:
@@ -99,9 +98,10 @@ class DictaTranslateAPI:
                             
                         logger.debug("Received WebSocket message: %r", response)
                         
-                        # Handle ping/pong immediately
                         try:
                             data = json.loads(response)
+                            
+                            # Handle ping/pong
                             if isinstance(data, dict):
                                 if data.get("type") == "ping":
                                     await ws.send(json.dumps({"type": "pong"}))
@@ -110,31 +110,24 @@ class DictaTranslateAPI:
                                 elif data.get("stage") == "done":
                                     logger.debug("Received done message")
                                     translation_complete = True
-                                    break
-                        except json.JSONDecodeError:
-                            pass  # Not a complete message, continue accumulating
-                        
-                        # Accumulate JSON chunks
-                        current_json += response
-                        
-                        try:
-                            # Try to parse accumulated JSON
-                            data = json.loads(current_json)
+                                    continue
+                                elif "out" in data:
+                                    translated_text = data["out"].strip()
+                                    if translated_text:
+                                        translated_chunks.append(translated_text)
+                                        logger.debug("Added translation chunk: %s", translated_text)
                             
-                            # Successfully parsed, process the data
-                            if isinstance(data, list):
+                            # Handle array responses
+                            elif isinstance(data, list):
                                 for chunk in data:
                                     if isinstance(chunk, dict) and "out" in chunk:
                                         translated_text = chunk["out"].strip()
                                         if translated_text:
                                             translated_chunks.append(translated_text)
                                             logger.debug("Added translation chunk: %s", translated_text)
-                            
-                            # Clear accumulated JSON after successful parse
-                            current_json = ""
-                            
+                                            
                         except json.JSONDecodeError:
-                            # Continue accumulating if not complete JSON
+                            logger.warning("Failed to parse WebSocket message: %r", response)
                             continue
                             
                     except asyncio.TimeoutError:
