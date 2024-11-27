@@ -386,8 +386,11 @@ async def translate(
     Translates text between Hebrew and English using the Dicta Translation API.
     
     Args:
-        text: Text to translate
-        to_english: If True, translate Hebrew->English. If False, English->Hebrew.
+        interaction: The Discord interaction context
+        text: The text to translate
+        direction: Translation direction ('he-en' or 'en-he')
+        genre: Translation genre (modern, biblical, mishnaic, poetic)
+        temperature: Creativity level (0-1, higher values = more creative translations)
     """
     logger.info("Translate command received from %s#%s (%s)", 
                 interaction.user.name,
@@ -397,6 +400,22 @@ async def translate(
     await interaction.response.defer()
     
     try:
+        # Validate input text
+        if not text.strip():
+            await interaction.followup.send(
+                "Please provide text to translate.",
+                ephemeral=True
+            )
+            return
+
+        # Validate text length
+        if len(text) > MAX_TEXT_LENGTH:
+            await interaction.followup.send(
+                f"Text is too long. Maximum length is {MAX_TEXT_LENGTH} characters.",
+                ephemeral=True
+            )
+            return
+
         # Validate genre
         if genre not in translate_client.TRANSLATION_GENRES:
             await interaction.followup.send(
@@ -406,34 +425,60 @@ async def translate(
             )
             return
 
-        direction = "he-en" if to_english else "en-he"
+        # Perform translation
         translated_text = await translate_client.translate(
             text=text,
             direction=direction,
-            genre=genre
+            genre=genre,
+            temperature=temperature
         )
         
         # Create embed for translation result
         embed = Embed(
             title="Translation Result",
-            color=Color.blue(),
-            description=f"**Original Text:**\n```{text}```\n\n**Translated Text:**\n```{translated_text}```"
+            color=Color.blue()
         )
+
+        # Format direction display
+        direction_display = "Hebrew → English" if direction == "he-en" else "English → Hebrew"
         
-        # Add translation direction
+        # Add fields
         embed.add_field(
-            name="Direction",
-            value=f"🔄 {'Hebrew → English' if to_english else 'English → Hebrew'}\n📝 Genre: {genre}",
+            name="Original Text",
+            value=f"```{text}```",
+            inline=False
+        )
+        embed.add_field(
+            name="Translated Text",
+            value=f"```{translated_text}```",
+            inline=False
+        )
+        embed.add_field(
+            name="Settings",
+            value=(
+                f"🔄 Direction: {direction_display}\n"
+                f"📝 Genre: {genre}\n"
+                f"🎲 Temperature: {temperature:.2f}"
+            ),
             inline=True
         )
             
-        embed.set_footer(text="Powered by Dicta Translation API")
+        embed.set_footer(text="Powered by Dicta Translation API • Use /help for more info")
         
         await interaction.followup.send(embed=embed)
         
     except Exception as e:
-        logger.error("Translation error: %s", str(e))
-        await handle_command_error(interaction, f"Translation failed: {str(e)}")
+        logger.error("Translation error: %s", str(e), exc_info=True)
+        error_msg = "An error occurred during translation. Please try again later."
+        if "too many requests" in str(e).lower():
+            error_msg = "Rate limit exceeded. Please wait a moment before trying again."
+        elif "timeout" in str(e).lower():
+            error_msg = "Translation timed out. Please try again with shorter text."
+        
+        await interaction.followup.send(
+            error_msg,
+            ephemeral=True
+        )
 
 @translate.error
 async def translate_error(ctx: Context, error: Exception | None) -> None:
