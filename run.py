@@ -22,30 +22,28 @@ logging.basicConfig(
     ]
 )
 
-# Configure Discord logging to be less verbose
-discord_logger = logging.getLogger('discord')
-discord_logger.setLevel(logging.WARNING)
-discord_http = logging.getLogger('discord.http')
-discord_http.setLevel(logging.WARNING)
-discord_gateway = logging.getLogger('discord.gateway')
-discord_gateway.setLevel(logging.WARNING)
-discord_client = logging.getLogger('discord.client')
-discord_client.setLevel(logging.WARNING)
-
-# Add filters to suppress specific verbose messages
-discord_http.addFilter(lambda record: not any(x in record.getMessage() for x in [
-    'PUT /applications',
-    'DELETE /applications',
-    'PATCH /applications'
-]))
-discord_gateway.addFilter(lambda record: not any(x in record.getMessage() for x in [
-    'WebSocket Event',
-    'Dispatching event',
-    'Shard ID'
-]))
+# Configure all Discord-related logging to be less verbose
+for logger_name in ['discord', 'discord.http', 'discord.gateway', 'discord.client', 'discord.state']:
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging.WARNING)
+    # Add comprehensive filters for common noise
+    logger.addFilter(lambda record: not any(x in record.getMessage() for x in [
+        'PUT /applications',
+        'DELETE /applications',
+        'PATCH /applications',
+        'WebSocket Event',
+        'Dispatching event',
+        'Shard ID',
+        'Keeping internal state',
+        'Got a request to',
+        'Got response',
+        'Received READY',
+        'Requesting member'
+    ]))
 
 # Suppress other noisy loggers
-logging.getLogger('watchdog').setLevel(logging.WARNING)
+for logger_name in ['watchdog', 'httpx', 'httpcore', 'websockets']:
+    logging.getLogger(logger_name).setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 class BotReloader(FileSystemEventHandler):
