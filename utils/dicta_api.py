@@ -67,6 +67,7 @@ class DictaTranslateAPI:
                 
                 # Process response chunks
                 translated_chunks = []
+                current_json = ""
                 
                 while True:
                     try:
@@ -78,28 +79,38 @@ class DictaTranslateAPI:
                             
                         logger.debug("Received WebSocket message: %r", response)
                         
-                        # Accumulate partial JSON chunks
+                        # Handle ping/pong immediately
                         try:
                             data = json.loads(response)
+                            if isinstance(data, dict) and data.get("type") == "ping":
+                                await ws.send(json.dumps({"type": "pong"}))
+                                logger.debug("Sent pong response")
+                                continue
+                            elif isinstance(data, dict) and data.get("stage") == "done":
+                                logger.debug("Received done message")
+                                break
+                        except json.JSONDecodeError:
+                            pass  # Not a complete message, continue accumulating
+                        
+                        # Accumulate JSON chunks
+                        current_json += response
+                        
+                        try:
+                            # Try to parse accumulated JSON
+                            data = json.loads(current_json)
                             
-                            # Handle different message types
+                            # Successfully parsed, process the data
                             if isinstance(data, list):
-                                # Translation chunk
                                 for chunk in data:
                                     if isinstance(chunk, dict) and "out" in chunk:
                                         translated_chunks.append(chunk["out"])
                                         logger.debug("Added translation chunk: %s", chunk["out"])
-                            elif isinstance(data, dict):
-                                if data.get("stage") == "done":
-                                    logger.debug("Received done message")
-                                    break
-                                elif data.get("type") == "ping":
-                                    # Send pong response
-                                    await ws.send(json.dumps({"type": "pong"}))
-                                    logger.debug("Sent pong response")
-                        except json.JSONDecodeError as e:
-                            # Only log partial chunks at debug level
-                            logger.debug("Received partial JSON chunk: %r (Error: %s)", response, str(e))
+                            
+                            # Clear accumulated JSON after successful parse
+                            current_json = ""
+                            
+                        except json.JSONDecodeError:
+                            # Continue accumulating if not complete JSON
                             continue
                             
                     except asyncio.TimeoutError:
