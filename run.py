@@ -22,8 +22,14 @@ logging.basicConfig(
     ]
 )
 
-# Suppress noisy loggers
-logging.getLogger('discord').setLevel(logging.WARNING)
+# Configure Discord logging to be less verbose
+discord_logger = logging.getLogger('discord')
+discord_logger.setLevel(logging.WARNING)
+discord_http = logging.getLogger('discord.http')
+discord_http.setLevel(logging.WARNING)
+discord_http.addFilter(lambda record: 'PUT /applications' not in record.getMessage())
+
+# Suppress other noisy loggers
 logging.getLogger('watchdog').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
