@@ -8,7 +8,7 @@ from discord.ext.commands import Context
 from discord import Embed, Color
 
 from utils.config import settings
-from utils.nakdan_api import get_nikud, analyze_text
+from utils.nakdan_api import get_nikud, analyze_text, get_lemmas
 
 # Configure logging with proper encoding for Hebrew text
 logging.basicConfig(
