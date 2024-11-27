@@ -117,35 +117,47 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
 
     # Create an embed for morphological analysis
     embed = Embed(
-        title="Detailed Morphological Analysis",
+        title="ניתוח דקדוקי | Morphological Analysis",
         color=Color.green(),
-        description=f"Analyzing text: {text}"
+        description=f"**Text to analyze:**\n```{text}```\n➖➖➖➖➖"
     )
 
+    # Group analyses into chunks of 3 for better display
     for i, analysis in enumerate(result.word_analysis, 1):
-        if analysis:
-            field_content = []
-            field_content.append(f"**Original Word:** {analysis['word']}")
+        if not analysis:
+            continue
             
-            if analysis['lemma']: 
-                field_content.append(f"📚 **Root/Lemma:** `{analysis['lemma']}`")
-            if analysis['pos']: 
-                field_content.append(f"🏷️ **Part of Speech:** `{analysis['pos']}`")
-            
-            grammar_info = []
-            if analysis['gender']: grammar_info.append(f"Gender: {analysis['gender']}")
-            if analysis['number']: grammar_info.append(f"Number: {analysis['number']}")
-            if analysis['person']: grammar_info.append(f"Person: {analysis['person']}")
-            if analysis['tense']: grammar_info.append(f"Tense: {analysis['tense']}")
-            
-            if grammar_info:
-                field_content.append(f"📝 **Grammar:**\n`{' | '.join(grammar_info)}`")
+        field_content = []
+        
+        # Word and lemma section
+        word_section = [f"**{analysis['word']}**"]
+        if analysis['lemma']:
+            word_section.append(f"📚 Root: `{analysis['lemma']}`")
+        field_content.append(" • ".join(word_section))
+        
+        # Part of speech
+        if analysis['pos']:
+            field_content.append(f"🏷️ `{analysis['pos']}`")
+        
+        # Grammar features
+        grammar_parts = []
+        if analysis['gender']: grammar_parts.append(f"Gender: {analysis['gender']}")
+        if analysis['number']: grammar_parts.append(f"Number: {analysis['number']}")
+        if analysis['person']: grammar_parts.append(f"Person: {analysis['person']}")
+        if analysis['tense']: grammar_parts.append(f"Tense: {analysis['tense']}")
+        
+        if grammar_parts:
+            field_content.append(f"📝 `{' | '.join(grammar_parts)}`")
 
-            embed.add_field(
-                name=f"Word {i}",
-                value="\n".join(field_content),
-                inline=False
-            )
+        embed.add_field(
+            name=f"#{i}",
+            value="\n".join(field_content),
+            inline=True
+        )
+        
+        # Add empty field every 3 words for alignment
+        if i % 3 == 0:
+            embed.add_field(name="\u200b", value="\u200b", inline=False)
 
     embed.set_footer(text="🔍 Morphological analysis powered by Nakdan API")
     await interaction.followup.send(embed=embed)
