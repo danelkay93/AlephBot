@@ -27,7 +27,22 @@ discord_logger = logging.getLogger('discord')
 discord_logger.setLevel(logging.WARNING)
 discord_http = logging.getLogger('discord.http')
 discord_http.setLevel(logging.WARNING)
-discord_http.addFilter(lambda record: 'PUT /applications' not in record.getMessage())
+discord_gateway = logging.getLogger('discord.gateway')
+discord_gateway.setLevel(logging.WARNING)
+discord_client = logging.getLogger('discord.client')
+discord_client.setLevel(logging.WARNING)
+
+# Add filters to suppress specific verbose messages
+discord_http.addFilter(lambda record: not any(x in record.getMessage() for x in [
+    'PUT /applications',
+    'DELETE /applications',
+    'PATCH /applications'
+]))
+discord_gateway.addFilter(lambda record: not any(x in record.getMessage() for x in [
+    'WebSocket Event',
+    'Dispatching event',
+    'Shard ID'
+]))
 
 # Suppress other noisy loggers
 logging.getLogger('watchdog').setLevel(logging.WARNING)

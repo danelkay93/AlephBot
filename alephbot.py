@@ -55,9 +55,11 @@ async def register_commands(commands: List[commands.Command]) -> None:
     """Register commands all at once to minimize API calls."""
     try:
         # Add all commands to the tree at once
+        command_names = []
         for cmd in commands:
             bot.tree.add_command(cmd, override=True)
-            logger.info("Added command to tree: %s", cmd.name)
+            command_names.append(cmd.name)
+        logger.info("Added commands to tree: %s", ", ".join(command_names))
     except Exception as e:
         logger.error("Failed to register commands: %s", str(e))
         raise
@@ -110,15 +112,13 @@ async def setup_hook():
 async def on_ready():
     """Handle bot ready event"""
     logger.info('Bot %s is now online!', bot.user)
-    logger.info('Connected to %d guilds:', len(bot.guilds))
-    for guild in bot.guilds:
-        logger.info('- %s (ID: %s)', guild.name, guild.id)
+    guild_names = [f"{guild.name} (ID: {guild.id})" for guild in bot.guilds]
+    logger.info('Connected to %d guilds: %s', len(bot.guilds), ', '.join(guild_names))
     
     # Log registered commands
     commands = bot.tree.get_commands()
-    logger.info("Currently registered commands:")
-    for cmd in commands:
-        logger.info("- /%s", cmd.name)
+    command_names = [f"/{cmd.name}" for cmd in commands]
+    logger.info("Currently registered commands: %s", ', '.join(command_names))
 
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
