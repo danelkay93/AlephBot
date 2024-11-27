@@ -144,7 +144,8 @@ class BotReloader(FileSystemEventHandler):
             'alephbot.py',
             str(Path('utils/nakdan_api.py')),
             str(Path('utils/config.py')),
-            str(Path('utils/hebrew.py'))
+            str(Path('utils/hebrew.py')),
+            str(Path('utils/dicta_api.py'))
         }
         if any(event.src_path.endswith(file) for file in watched_files):
             logger.info(f"Detected change in watched file: {event.src_path}")
