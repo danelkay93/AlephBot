@@ -15,6 +15,10 @@ from utils.discord_helpers import (
     create_hebrew_embed,
     handle_hebrew_command_error
 )
+from utils.hebrew_constants import (
+    HebrewFeatures, EmbedTitles, ERROR_MESSAGES,
+    DEFAULT_TIMEOUT, MAX_TEXT_LENGTH
+)
 
 # Configure logging with proper encoding for Hebrew text
 logging.basicConfig(
