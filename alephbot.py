@@ -100,7 +100,16 @@ async def translate(interaction: discord.Interaction, text: str) -> None:
     logger.info("Translate command triggered by %s (%s)", interaction.user.global_name, interaction.user.id)
     await interaction.response.defer()
     try:
-        translated = await translate_client.translate(text)
+        # Detect if text is Hebrew to determine translation direction
+        is_heb = any('\u0590' <= char <= '\u05FF' for char in text)
+        direction = "he2en" if is_heb else "en2he"
+        
+        translated = await translate_client.translate(
+            text=text,
+            direction=direction,
+            genre="modern",
+            temperature=0
+        )
         embed = Embed(
             title="Translation",
             color=Color.blue(),
