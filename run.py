@@ -22,15 +22,26 @@ logging.basicConfig(
     ]
 )
 
+# Configure root discord logger first
+discord_logger = logging.getLogger('discord')
+discord_logger.setLevel(logging.WARNING)
+discord_logger.propagate = False  # Prevent propagation to root logger
+
 # Configure all Discord-related logging to be less verbose
-for logger_name in ['discord', 'discord.http', 'discord.gateway', 'discord.client', 'discord.state']:
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(logging.WARNING)
-    # Add comprehensive filters for common noise
-    logger.addFilter(lambda record: not any(x in record.getMessage() for x in [
-        'PUT /applications',
-        'DELETE /applications',
-        'PATCH /applications',
+discord_loggers = {
+    'discord.http': [
+        'GET /api',
+        'POST /api',
+        'PUT /api',
+        'DELETE /api',
+        'PATCH /api',
+        'Making request',
+        'Request returned',
+        'Response status',
+        'Received payload',
+        'Ratelimit bucket',
+    ],
+    'discord.gateway': [
         'WebSocket Event',
         'Dispatching event',
         'Shard ID',
@@ -38,12 +49,38 @@ for logger_name in ['discord', 'discord.http', 'discord.gateway', 'discord.clien
         'Got a request to',
         'Got response',
         'Received READY',
-        'Requesting member'
-    ]))
+        'Requesting member',
+        'Sending heartbeat',
+        'Received heartbeat',
+    ],
+    'discord.client': [
+        'on_socket',
+        'Scheduling',
+        'Cleaning up',
+        'Preparing',
+        'Processing',
+    ],
+    'discord.state': [
+        'Dispatching',
+        'Calling event',
+        'Processing raw',
+        'Creating member',
+    ]
+}
+
+# Configure each Discord logger with specific filters
+for logger_name, filtered_msgs in discord_loggers.items():
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging.WARNING)
+    logger.propagate = False  # Prevent propagation
+    logger.addFilter(lambda record: not any(x in record.getMessage() for x in filtered_msgs))
 
 # Suppress other noisy loggers
-for logger_name in ['watchdog', 'httpx', 'httpcore', 'websockets']:
-    logging.getLogger(logger_name).setLevel(logging.WARNING)
+noisy_loggers = ['watchdog', 'httpx', 'httpcore', 'websockets', 'asyncio', 'aiohttp']
+for logger_name in noisy_loggers:
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging.WARNING)
+    logger.propagate = False  # Prevent propagation
 logger = logging.getLogger(__name__)
 
 class BotReloader(FileSystemEventHandler):
