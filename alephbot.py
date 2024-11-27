@@ -51,10 +51,10 @@ translate_client = DictaTranslateAPI()
 
 # Sync commands on startup
 async def register_commands_with_backoff(commands: List[commands.Command]) -> None:
-    """Register commands with exponential backoff and jitter."""
-    base_delay = 1.0
-    max_delay = 60.0
-    jitter_range = 0.1
+    """Register commands with smart rate limit handling."""
+    base_delay = 5.0  # Start with a more conservative delay
+    max_delay = 120.0  # Allow for longer max delay
+    jitter_range = 0.2
     
     for cmd in commands:
         retry_count = 0
@@ -64,21 +64,29 @@ async def register_commands_with_backoff(commands: List[commands.Command]) -> No
             try:
                 bot.tree.add_command(cmd, override=True)
                 logger.info("Added command: %s", cmd.name)
+                # Add small delay between successful registrations
+                await asyncio.sleep(1.0)
                 break
             except discord.HTTPException as e:
                 if e.status == 429:  # Rate limit error
                     retry_count += 1
-                    # Add jitter to avoid thundering herd
-                    jitter = random.uniform(-jitter_range * current_delay, 
-                                         jitter_range * current_delay)
-                    wait_time = min(current_delay + jitter, max_delay)
                     
-                    logger.warning("Rate limited while adding %s, waiting %.2f seconds...", 
-                                 cmd.name, wait_time)
+                    # Extract retry_after from rate limit response if available
+                    retry_after = getattr(e, 'retry_after', None)
+                    if retry_after:
+                        wait_time = float(retry_after) + 1.0  # Add 1 second buffer
+                    else:
+                        # Add jitter to avoid thundering herd
+                        jitter = random.uniform(-jitter_range * current_delay, 
+                                             jitter_range * current_delay)
+                        wait_time = min(current_delay + jitter, max_delay)
+                    
+                    logger.warning("Rate limited while adding %s (attempt %d), waiting %.2f seconds...", 
+                                 cmd.name, retry_count, wait_time)
                     await asyncio.sleep(wait_time)
                     
-                    # Exponential backoff
-                    current_delay = min(current_delay * 2, max_delay)
+                    # Exponential backoff with more aggressive scaling
+                    current_delay = min(current_delay * 2.5, max_delay)
                 else:
                     logger.error("HTTP error adding command %s: %s", cmd.name, str(e))
                     raise
@@ -86,11 +94,11 @@ async def register_commands_with_backoff(commands: List[commands.Command]) -> No
                 logger.error("Error adding command %s: %s", cmd.name, str(e))
                 raise
 
-async def sync_commands_with_backoff(max_retries: int = 5) -> Optional[List[discord.app_commands.Command]]:
-    """Sync command tree with exponential backoff and jitter."""
-    base_delay = 2.0
-    max_delay = 120.0
-    jitter_range = 0.1
+async def sync_commands_with_backoff(max_retries: int = 10) -> Optional[List[discord.app_commands.Command]]:
+    """Sync command tree with smart rate limit handling."""
+    base_delay = 5.0  # Start with a more conservative delay
+    max_delay = 300.0  # Allow for longer max delay
+    jitter_range = 0.2
     
     for attempt in range(max_retries):
         try:
@@ -104,13 +112,18 @@ async def sync_commands_with_backoff(max_retries: int = 5) -> Optional[List[disc
             
         except discord.HTTPException as e:
             if e.status == 429 and attempt < max_retries - 1:
-                current_delay = min(base_delay * (2 ** attempt), max_delay)
-                jitter = random.uniform(-jitter_range * current_delay,
-                                     jitter_range * current_delay)
-                wait_time = current_delay + jitter
+                # Extract retry_after from rate limit response if available
+                retry_after = getattr(e, 'retry_after', None)
+                if retry_after:
+                    wait_time = float(retry_after) + 2.0  # Add 2 second buffer
+                else:
+                    current_delay = min(base_delay * (3 ** attempt), max_delay)
+                    jitter = random.uniform(-jitter_range * current_delay,
+                                         jitter_range * current_delay)
+                    wait_time = current_delay + jitter
                 
-                logger.warning("Rate limited during sync, waiting %.2f seconds...", 
-                             wait_time)
+                logger.warning("Rate limited during sync (attempt %d/%d), waiting %.2f seconds...", 
+                             attempt + 1, max_retries, wait_time)
                 await asyncio.sleep(wait_time)
             else:
                 logger.error("HTTP error during sync: %s", str(e))
