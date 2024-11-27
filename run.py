@@ -55,7 +55,8 @@ discord_loggers = {
         'Sending heartbeat',
         'Received heartbeat',
         'Keeping shard ID',
-        'For Shard ID None',
+        'For Shard ID',
+        'Shard ID',
         'WebSocket Event',
         'Received GUILD_',
         'Received CHANNEL_',
@@ -65,7 +66,6 @@ discord_loggers = {
         'Client found matching',
         'Requesting',
         'Got a request',
-        'Shard ID None',
     ],
     'discord.client': [
         'on_socket',
