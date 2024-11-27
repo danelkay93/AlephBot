@@ -72,9 +72,11 @@ class DictaTranslateAPI:
         try:
             logger.info("Dicta Translation Request - Direction: %s | Genre: %s",
                        direction, genre)
+            logger.debug("Opening WebSocket connection to: %s", DICTA_WS_URL)
             
             async with websockets.connect(DICTA_WS_URL) as ws:
                 # Send translation request
+                logger.debug("Connected to WebSocket")
                 request = {
                     "text": text,
                     "direction": direction,
@@ -82,10 +84,13 @@ class DictaTranslateAPI:
                     "style": genre,  # API requires both genre and style
                     "temperature": temperature
                 }
-                await ws.send(json.dumps(request))
+                request_json = json.dumps(request)
+                logger.debug("Sending WebSocket message: %r", request_json)
+                await ws.send(request_json)
                 
                 # Process translation response
                 response = await ws.recv()
+                logger.debug("Received WebSocket message: %r", response)
                 if not response.strip():
                     raise ValueError("Empty response received")
                     
