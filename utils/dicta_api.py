@@ -101,8 +101,14 @@ class DictaTranslateAPI:
                         try:
                             data = json.loads(response)
                             
-                            # Handle ping/pong
+                            # Handle error messages
                             if isinstance(data, dict):
+                                if "error" in data:
+                                    error_msg = data["error"]
+                                    logger.error("Translation API error: %s", error_msg)
+                                    raise ValueError(f"API Error: {error_msg}")
+                                    
+                                # Handle ping/pong
                                 if data.get("type") == "ping":
                                     await ws.send(json.dumps({"type": "pong"}))
                                     logger.debug("Sent pong response")
@@ -120,13 +126,22 @@ class DictaTranslateAPI:
                             # Handle array responses
                             elif isinstance(data, list):
                                 for chunk in data:
-                                    if isinstance(chunk, dict) and "out" in chunk:
-                                        translated_text = chunk["out"].strip()
-                                        if translated_text:
-                                            translated_chunks.append(translated_text)
-                                            logger.debug("Added translation chunk: %s", translated_text)
+                                    if isinstance(chunk, dict):
+                                        if "error" in chunk:
+                                            error_msg = chunk["error"]
+                                            logger.error("Translation chunk error: %s", error_msg)
+                                            raise ValueError(f"API Error: {error_msg}")
+                                        elif "out" in chunk:
+                                            translated_text = chunk["out"].strip()
+                                            if translated_text:
+                                                translated_chunks.append(translated_text)
+                                                logger.debug("Added translation chunk: %s", translated_text)
                                             
-                        except json.JSONDecodeError:
+                        except json.JSONDecodeError as e:
+                            # Check if the raw response contains an error message
+                            if "Error during translation task" in response:
+                                logger.error("Translation API error: %s", response)
+                                raise ValueError(f"API Error: {response}")
                             logger.warning("Failed to parse WebSocket message: %r", response)
                             continue
                             
