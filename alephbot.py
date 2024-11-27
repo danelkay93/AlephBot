@@ -46,8 +46,8 @@ intents.dm_messages = True  # Enable DM messages
 
 bot = commands.Bot(command_prefix="/", intents=intents)
 
-# Initialize Dicta Translation API client
-translate_client = DictaTranslateAPI()
+# Initialize API clients in setup_hook
+translate_client = None
 
 # Sync commands on startup
 async def register_commands(commands: List[commands.Command]) -> None:
@@ -77,8 +77,13 @@ async def sync_commands() -> Optional[List[discord.app_commands.Command]]:
 @bot.event
 async def setup_hook():
     """Initialize bot and sync commands globally"""
+    global translate_client
+    
     logger.info("Bot setup starting...")
     try:
+        # Initialize API clients
+        translate_client = DictaTranslateAPI()
+        
         # Register and sync commands
         logger.info("Registering commands...")
         commands_to_add = [
@@ -94,8 +99,10 @@ async def setup_hook():
         
         # Sync globally once
         await sync_commands()
+        
+        logger.info("Bot setup completed successfully")
     except Exception as e:
-        logger.error("Failed during command registration: %s", e, exc_info=True)
+        logger.error("Failed during bot setup: %s", e, exc_info=True)
         raise
 
 @bot.event
@@ -444,9 +451,28 @@ async def invite_error(ctx: Context, error: Exception) -> None:
     logger.error("Error in invite command: %s", str(error))
     await ctx.send("Sorry, I couldn't generate an invite link. Please try again later.")
 
+async def main():
+    """Main entry point for the bot"""
+    try:
+        async with bot:
+            await bot.start(settings.discord_token)
+    except discord.LoginFailure as e:
+        logger.error("Failed to login to Discord: %s", e)
+        raise
+    except Exception as e:
+        logger.error("Unexpected error: %s", e)
+        raise
+    finally:
+        # Cleanup
+        if translate_client:
+            await translate_client.close()
+
 # Run the bot
-try:
-    bot.run(settings.discord_token)
-except discord.LoginFailure as e:
-    logger.error("Failed to login to Discord: %s", e)
-    raise
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Bot shutdown requested")
+    except Exception as e:
+        logger.error("Fatal error: %s", e)
+        raise

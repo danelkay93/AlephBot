@@ -84,7 +84,7 @@ class BotReloader(FileSystemEventHandler):
                 
                 # Wait for initial setup to complete
                 logger.info("Waiting for bot setup to complete...")
-                await asyncio.sleep(5)  # Give the bot time to initialize
+                await asyncio.sleep(2)  # Reduced wait time
                 
                 if self.process.returncode is not None:
                     raise RuntimeError(f"Bot process terminated during setup with code {self.process.returncode}")
