@@ -114,48 +114,46 @@ async def translate(interaction: discord.Interaction, text: str) -> None:
     """Translates text using the Dicta API."""
     logger.info("Translate command triggered by %s (%s)", interaction.user.global_name, interaction.user.id)
     await interaction.response.defer()
-    try:
-        # Detect if text is Hebrew to determine translation direction
-        is_heb = any('\u0590' <= char <= '\u05FF' for char in text)
-        direction = "he2en" if is_heb else "en2he"
-        
-        translated = await translate_client.translate(
-            text=text,
-            direction=direction,
-            genre="modern",
-            temperature=0
-        )
-        embed = Embed(
-            title="Translation",
-            color=Color.blue(),
-            description=f"**Original Text:**\n{text}\n\n**Translated Text:**\n{translated}"
-        )
-        view = TranslationView()
-        
-        async def genre_callback(interaction: discord.Interaction):
-            genre = interaction.data["values"][0]
-            try:
-                new_translation = await translate_client.translate(
-                    text=text,
-                    direction=direction,
-                    genre=genre,
-                    temperature=0
-                )
-                new_embed = Embed(
-                    title=f"Translation ({genre.title()} Style)",
-                    color=Color.blue(),
-                    description=f"**Original Text:**\n{text}\n\n**Translated Text:**\n{new_translation}"
-                )
-                await interaction.response.edit_message(embed=new_embed, view=view)
-            except Exception as e:
-                logger.error("Translation failed: %s", e)
-                await interaction.response.send_message("Translation failed. Please try again later.", ephemeral=True)
-        
-        view.children[0].callback = genre_callback
-        await interaction.followup.send(embed=embed, view=view)
-    except Exception as e:
-        logger.error("Translation failed: %s", e)
-        await interaction.followup.send("Translation failed. Please try again later.")
+    
+    # Detect if text is Hebrew to determine translation direction
+    is_heb = any('\u0590' <= char <= '\u05FF' for char in text)
+    direction = "he2en" if is_heb else "en2he"
+    
+    # Create initial embed without translation
+    embed = Embed(
+        title="Translation",
+        color=Color.blue(),
+        description=f"**Original Text:**\n{text}\n\n**Select translation style below:**"
+    )
+    view = TranslationView()
+    
+    async def genre_callback(interaction: discord.Interaction):
+        genre = interaction.data["values"][0]
+        try:
+            translated = await translate_client.translate(
+                text=text,
+                direction=direction,
+                genre=genre,
+                temperature=0
+            )
+            if not translated:
+                raise ValueError("No translation received")
+                
+            new_embed = Embed(
+                title=f"Translation ({genre.title()} Style)",
+                color=Color.blue(),
+                description=f"**Original Text:**\n{text}\n\n**Translated Text:**\n{translated}"
+            )
+            await interaction.response.edit_message(embed=new_embed, view=view)
+        except Exception as e:
+            logger.error("Translation failed: %s", e)
+            await interaction.response.send_message(
+                "Translation failed. Please try again later.", 
+                ephemeral=True
+            )
+    
+    view.children[0].callback = genre_callback
+    await interaction.followup.send(embed=embed, view=view)
 
 @bot.tree.command(name="invite", description="Get an invite link to add the bot to your server")
 async def invite(interaction: discord.Interaction) -> None:
