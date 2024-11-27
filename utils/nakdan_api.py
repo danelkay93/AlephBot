@@ -51,8 +51,9 @@ def analyze_text(text: str, timeout: float = 10.0, max_length: int = 500) -> Nak
                 options = word_data.get('options', [])
                 
                 # Get the first vowelized form for display
-                if options and isinstance(options[0], str):
-                    vowelized_words.append(options[0])
+                if options and isinstance(options[0], list) and len(options[0]) > 0:
+                    vowelized_form = options[0][0] if isinstance(options[0][0], str) else word
+                    vowelized_words.append(vowelized_form)
                 else:
                     vowelized_words.append(word)
                 
@@ -67,27 +68,28 @@ def analyze_text(text: str, timeout: float = 10.0, max_length: int = 500) -> Nak
                     'tense': ''
                 }
                 
-                # Parse the first option's analysis string
-                if options and isinstance(options[0], str):
+                # Parse the morphological analysis from options
+                if options and isinstance(options[0], list):
                     try:
-                        # Split analysis parts (typically separated by |)
-                        parts = options[0].split('|')
-                        if len(parts) > 1:
-                            # First part usually contains POS and basic features
-                            features = parts[0].split(' ')
-                            if features:
-                                analysis['pos'] = features[0]
-                                # Additional features may include gender, number, etc.
-                                for feature in features[1:]:
-                                    if 'זכר' in feature or 'נקבה' in feature:
-                                        analysis['gender'] = feature
-                                    elif 'יחיד' in feature or 'רבים' in feature:
-                                        analysis['number'] = feature
-                                    elif 'עבר' in feature or 'הווה' in feature or 'עתיד' in feature:
-                                        analysis['tense'] = feature
-                            # Second part might contain the lemma
-                            if len(parts) > 1:
-                                analysis['lemma'] = parts[1].strip()
+                        first_option = options[0]
+                        if len(first_option) >= 2 and isinstance(first_option[1], list):
+                            morph_data = first_option[1]
+                            if len(morph_data) >= 2:
+                                # Extract lemma from first element
+                                analysis['lemma'] = morph_data[0][1] if len(morph_data[0]) > 1 else ''
+                                
+                                # Extract POS and features from second element
+                                if len(morph_data) > 1:
+                                    features = morph_data[1][1].split(' ') if len(morph_data[1]) > 1 else []
+                                    if features:
+                                        analysis['pos'] = features[0]
+                                        for feature in features[1:]:
+                                            if any(gender in feature for gender in ['זכר', 'נקבה']):
+                                                analysis['gender'] = feature
+                                            elif any(number in feature for number in ['יחיד', 'רבים']):
+                                                analysis['number'] = feature
+                                            elif any(tense in feature for tense in ['עבר', 'הווה', 'עתיד']):
+                                                analysis['tense'] = feature
                     except Exception as e:
                         logger.warning("Failed to parse morphological analysis: %s", e)
                 
