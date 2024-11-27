@@ -4,6 +4,7 @@ import time
 import signal
 import asyncio
 from pathlib import Path
+from queue import Queue
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 import subprocess
@@ -17,9 +18,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class BotReloader(FileSystemEventHandler):
-    def __init__(self):
+    def __init__(self, event_queue: Queue):
         self.process: Optional[subprocess.Popen] = None
         self.restart_lock = asyncio.Lock()
+        self.event_queue = event_queue
         self.start_bot()
         
         # Set up signal handlers
@@ -92,24 +94,43 @@ class BotReloader(FileSystemEventHandler):
             self.start_bot()
 
     def on_modified(self, event: FileModifiedEvent) -> None:
-        """Override watchdog's on_modified to handle async"""
+        """Override watchdog's on_modified to queue events"""
         if event.src_path.endswith('.py'):
-            asyncio.create_task(self.handle_modified(event))
+            self.event_queue.put(event)
+
+async def process_events(event_queue: Queue, reloader: BotReloader) -> None:
+    """Process file modification events from the queue"""
+    while True:
+        try:
+            # Non-blocking check for events
+            while not event_queue.empty():
+                event = event_queue.get_nowait()
+                await reloader.handle_modified(event)
+            await asyncio.sleep(0.1)
+        except Exception as e:
+            logger.error(f"Error processing events: {e}")
+            await asyncio.sleep(1)
 
 async def main() -> None:
     """Main async function to run the reloader"""
     path = Path.cwd()
-    event_handler = BotReloader()
+    event_queue: Queue = Queue()
+    event_handler = BotReloader(event_queue)
     observer = Observer()
     observer.schedule(event_handler, path=str(path), recursive=True)
     observer.start()
 
     try:
+        # Start event processing task
+        event_processor = asyncio.create_task(process_events(event_queue, event_handler))
+        
+        # Keep main loop running
         while True:
             await asyncio.sleep(1)
     except asyncio.CancelledError:
         logger.info("Shutting down...")
     finally:
+        event_processor.cancel()
         observer.stop()
         event_handler.cleanup()
         observer.join()
