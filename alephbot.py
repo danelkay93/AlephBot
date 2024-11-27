@@ -10,7 +10,7 @@ from discord import Embed, Color
 
 from utils.config import settings
 from utils.nakdan_api import get_nikud, analyze_text, get_lemmas
-from utils.deepl_api import DeepLAPI
+from utils.dicta_api import DictaTranslateAPI
 from utils.discord_helpers import (
     handle_command_error,
     create_hebrew_embed,
@@ -43,8 +43,8 @@ intents.messages = True  # Enable messages intent
 
 bot = commands.Bot(command_prefix="/", intents=intents)
 
-# Initialize DeepL API client
-deepl_client = DeepLAPI(settings.deepl_token)
+# Initialize Dicta Translation API client
+translate_client = DictaTranslateAPI()
 
 # Sync commands on startup
 @bot.event
@@ -278,23 +278,19 @@ async def lemmatize_error(ctx: Context, error: Exception | None) -> None:
         logger.error("Unexpected error in lemmatize command: %s", error)
         await ctx.send("An unexpected error occurred. Please try again later.")
 
-@bot.tree.command(name='translate', description="Translate text between languages")
+@bot.tree.command(name='translate', description="Translate between Hebrew and English")
 @commands.cooldown(1, 30, commands.BucketType.user)
 async def translate(
     interaction: discord.Interaction,
     text: str,
-    target_lang: str,
-    source_lang: str = None,
-    formality: str = None
+    to_english: bool = True
 ) -> None:
     """
-    Translates text using the DeepL API.
+    Translates text between Hebrew and English using the Dicta Translation API.
     
     Args:
         text: Text to translate
-        target_lang: Target language code (e.g. 'EN-US', 'HE')
-        source_lang: Source language code (optional)
-        formality: Desired formality ('more', 'less', or None)
+        to_english: If True, translate Hebrew->English. If False, English->Hebrew.
     """
     logger.info("Translate command received from %s#%s (%s)", 
                 interaction.user.name,
@@ -304,11 +300,10 @@ async def translate(
     await interaction.response.defer()
     
     try:
-        translated_text = await deepl_client.translate(
+        direction = "he-en" if to_english else "en-he"
+        translated_text = await translate_client.translate(
             text=text,
-            target_lang=target_lang.upper(),
-            source_lang=source_lang.upper() if source_lang else None,
-            formality=formality
+            direction=direction
         )
         
         # Create embed for translation result
@@ -318,21 +313,14 @@ async def translate(
             description=f"**Original Text:**\n```{text}```\n\n**Translated Text:**\n```{translated_text}```"
         )
         
-        # Add language information
+        # Add translation direction
         embed.add_field(
-            name="Languages",
-            value=f"🔄 {source_lang or 'Auto'} ➡️ {target_lang}",
+            name="Direction",
+            value=f"🔄 {'Hebrew → English' if to_english else 'English → Hebrew'}",
             inline=True
         )
-        
-        if formality:
-            embed.add_field(
-                name="Formality",
-                value=f"📝 {formality}",
-                inline=True
-            )
             
-        embed.set_footer(text="Powered by DeepL API")
+        embed.set_footer(text="Powered by Dicta Translation API")
         
         await interaction.followup.send(embed=embed)
         
