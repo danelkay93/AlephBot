@@ -484,56 +484,9 @@ async def translate(interaction: discord.Interaction, text: str) -> None:
             )
             return
 
-        # Validate genre
-        if genre not in translate_client.TRANSLATION_GENRES:
-            await interaction.followup.send(
-                f"Invalid genre. Available genres:\n" + 
-                "\n".join(f"• `{g}`: {desc}" for g, desc in translate_client.TRANSLATION_GENRES.items()),
-                ephemeral=True
-            )
-            return
-
-        # Perform translation
-        translated_text = await translate_client.translate(
-            text=text,
-            direction=direction,
-            genre=genre,
-            temperature=temperature
-        )
-        
-        # Create embed for translation result
-        embed = Embed(
-            title="Translation Result",
-            color=Color.blue()
-        )
-
-        # Format direction display
-        direction_display = "Hebrew → English" if direction == "he-en" else "English → Hebrew"
-        
-        # Add fields
-        embed.add_field(
-            name="Original Text",
-            value=f"```{text}```",
-            inline=False
-        )
-        embed.add_field(
-            name="Translated Text",
-            value=f"```{translated_text}```",
-            inline=False
-        )
-        embed.add_field(
-            name="Settings",
-            value=(
-                f"🔄 Direction: {direction_display}\n"
-                f"📝 Genre: {genre}\n"
-                f"🎲 Temperature: {temperature:.2f}"
-            ),
-            inline=True
-        )
-            
-        embed.set_footer(text="Powered by Dicta Translation API • Use /help for more info")
-        
-        await interaction.followup.send(embed=embed)
+        # Create and send view with the text
+        view = TranslationView()
+        await interaction.followup.send(text, view=view)
         
     except Exception as e:
         logger.error("Translation error: %s", str(e), exc_info=True)
