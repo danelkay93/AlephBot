@@ -39,7 +39,7 @@ def analyze_text(text: str, timeout: float = 10.0, max_length: int = 500) -> Nak
         if not is_hebrew(text):
             return NakdanResponse(text="", error="Text must contain Hebrew characters")
 
-        data = _call_nakdan_api(text, timeout)
+        data = _call_nakdan_api(text, timeout, task="nakdan-analyze")
         
         # Process API response for analysis
         word_analysis = []
@@ -129,7 +129,7 @@ def is_hebrew(text: str) -> bool:
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=4, max=10)
 )
-def _call_nakdan_api(text: str, timeout: float = 10.0) -> list[dict[str, Any]]:
+def _call_nakdan_api(text: str, timeout: float = 10.0, task: str = "nakdan") -> list[dict[str, Any]]:
     """
     Makes the actual API call to Nakdan service.
     
@@ -146,7 +146,7 @@ def _call_nakdan_api(text: str, timeout: float = 10.0) -> list[dict[str, Any]]:
     BASE_URL = "https://nakdan-2-0.loadbalancer.dicta.org.il"
     url = f"{BASE_URL}/api"
     payload = {
-        "task": "nakdan",
+        "task": task,
         "data": text,
         "genre": "modern",
         "addmorph": True,
