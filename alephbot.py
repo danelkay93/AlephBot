@@ -357,11 +357,30 @@ async def lemmatize_error(ctx: Context, error: Exception | None) -> None:
     description="Translate text between Hebrew and English"
 )
 @commands.cooldown(1, 30, commands.BucketType.user)
+@app_commands.describe(
+    text="The text to translate",
+    direction="Translation direction (he-en or en-he)",
+    genre="Translation genre (modern, biblical, mishnaic, etc)",
+    temperature="Creativity level (0-1, higher = more creative)"
+)
+@app_commands.choices(
+    genre=[
+        app_commands.Choice(name="Modern", value="modern"),
+        app_commands.Choice(name="Biblical", value="biblical"),
+        app_commands.Choice(name="Mishnaic", value="mishnaic"),
+        app_commands.Choice(name="Poetic", value="poetic")
+    ],
+    direction=[
+        app_commands.Choice(name="Hebrew to English", value="he-en"),
+        app_commands.Choice(name="English to Hebrew", value="en-he")
+    ]
+)
 async def translate(
     interaction: discord.Interaction,
     text: str,
-    to_english: bool = True,
-    genre: str = "modern"
+    direction: str,
+    genre: str = "modern",
+    temperature: float = app_commands.Range[float, 0.0, 1.0] = 0.0
 ) -> None:
     """
     Translates text between Hebrew and English using the Dicta Translation API.
