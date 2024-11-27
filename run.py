@@ -7,9 +7,10 @@ from pathlib import Path
 from queue import Queue
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
-import subprocess
+import asyncio.subprocess
 import logging
 from typing import Optional
+from asyncio.subprocess import Process
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,10 +20,11 @@ logger = logging.getLogger(__name__)
 
 class BotReloader(FileSystemEventHandler):
     def __init__(self, event_queue: Queue):
-        self.process: Optional[subprocess.Popen] = None
+        self.process: Optional[Process] = None
         self.restart_lock = asyncio.Lock()
         self.event_queue = event_queue
-        self.start_bot()
+        # Initialize bot in the event loop
+        asyncio.create_task(self.start_bot())
         
         # Set up signal handlers
         signal.signal(signal.SIGINT, self.handle_signal)
@@ -31,35 +33,35 @@ class BotReloader(FileSystemEventHandler):
     def handle_signal(self, signum: int, frame) -> None:
         """Handle termination signals gracefully"""
         logger.info(f"Received signal {signum}, shutting down...")
-        self.cleanup()
+        asyncio.create_task(self.cleanup())
         sys.exit(0)
 
-    def cleanup(self) -> None:
+    async def cleanup(self) -> None:
         """Clean up resources before shutdown"""
         if self.process:
             logger.info("Terminating bot process...")
-            self.process.terminate()
             try:
-                self.process.wait(timeout=5)  # Give it 5 seconds to terminate gracefully
-            except subprocess.TimeoutExpired:
+                self.process.terminate()
+                await asyncio.wait_for(self.process.wait(), timeout=5.0)
+            except asyncio.TimeoutError:
                 logger.warning("Bot process did not terminate in time, forcing...")
-                self.process.kill()  # Force kill if it doesn't terminate
-                self.process.wait()
+                self.process.kill()
+                await self.process.wait()
 
-    def start_bot(self) -> None:
+    async def start_bot(self) -> None:
         """Start the bot process with proper environment"""
-        self.cleanup()
+        await self.cleanup()
         
         logger.info("Starting bot process...")
         env = os.environ.copy()
         env['PYTHONUNBUFFERED'] = '1'  # Ensure output is not buffered
         
-        self.process = subprocess.Popen(
-            [sys.executable, "alephbot.py"],
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True
+        self.process = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "alephbot.py",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=env
         )
         
         # Start output monitoring
@@ -67,22 +69,31 @@ class BotReloader(FileSystemEventHandler):
 
     async def monitor_output(self) -> None:
         """Monitor bot process output and log it"""
-        if not self.process:
+        if not self.process or not self.process.stdout or not self.process.stderr:
             return
-            
+
         while True:
-            if self.process.poll() is not None:  # Process has terminated
-                break
+            try:
+                # Read stdout
+                line = await self.process.stdout.readline()
+                if line:
+                    logger.info(f"Bot: {line.decode().strip()}")
                 
-            output = self.process.stdout.readline()
-            if output:
-                logger.info(f"Bot: {output.strip()}")
-            
-            error = self.process.stderr.readline()
-            if error:
-                logger.error(f"Bot Error: {error.strip()}")
-            
-            await asyncio.sleep(0.1)
+                # Read stderr
+                err_line = await self.process.stderr.readline()
+                if err_line:
+                    logger.error(f"Bot Error: {err_line.decode().strip()}")
+                
+                # Check if process has terminated
+                if self.process.returncode is not None:
+                    break
+                    
+                if not line and not err_line:
+                    await asyncio.sleep(0.1)
+                    
+            except Exception as e:
+                logger.error(f"Error monitoring output: {e}")
+                await asyncio.sleep(1)
 
     async def handle_modified(self, event: FileModifiedEvent) -> None:
         """Handle file modification events with debouncing"""
