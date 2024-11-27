@@ -84,79 +84,35 @@ class DictaTranslateAPI:
                 }
                 await ws.send(json.dumps(request))
                 
-                # Process response chunks
-                translated_chunks = []
-                translation_complete = False
+                # Process translation response
+                response = await ws.recv()
+                if not response.strip():
+                    raise ValueError("Empty response received")
+                    
+                logger.debug("Received WebSocket message: %r", response)
                 
-                while not translation_complete:
-                    try:
-                        response = await ws.recv()
-                        
-                        # Skip empty responses
-                        if not response.strip():
-                            continue
+                try:
+                    data = json.loads(response)
+                    
+                    # Handle error messages
+                    if isinstance(data, dict):
+                        if "error" in data:
+                            error_msg = data["error"]
+                            logger.error("Translation API error: %s", error_msg)
+                            raise ValueError(f"API Error: {error_msg}")
+                        elif "out" in data:
+                            translated_text = data["out"].strip()
+                            if not translated_text:
+                                raise ValueError("Empty translation received")
+                            logger.debug("Final translation: %s", translated_text)
+                            return translated_text
                             
-                        logger.debug("Received WebSocket message: %r", response)
-                        
-                        try:
-                            data = json.loads(response)
-                            
-                            # Handle error messages
-                            if isinstance(data, dict):
-                                if "error" in data:
-                                    error_msg = data["error"]
-                                    logger.error("Translation API error: %s", error_msg)
-                                    raise ValueError(f"API Error: {error_msg}")
-                                    
-                                # Handle ping/pong
-                                if data.get("type") == "ping":
-                                    await ws.send(json.dumps({"type": "pong"}))
-                                    logger.debug("Sent pong response")
-                                    continue
-                                elif data.get("stage") == "done":
-                                    logger.debug("Received done message")
-                                    translation_complete = True
-                                    continue
-                                elif "out" in data:
-                                    translated_text = data["out"].strip()
-                                    if translated_text:
-                                        translated_chunks.append(translated_text)
-                                        logger.debug("Added translation chunk: %s", translated_text)
-                            
-                            # Handle array responses
-                            elif isinstance(data, list):
-                                for chunk in data:
-                                    if isinstance(chunk, dict):
-                                        if "error" in chunk:
-                                            error_msg = chunk["error"]
-                                            logger.error("Translation chunk error: %s", error_msg)
-                                            raise ValueError(f"API Error: {error_msg}")
-                                        elif "out" in chunk:
-                                            translated_text = chunk["out"].strip()
-                                            if translated_text:
-                                                translated_chunks.append(translated_text)
-                                                logger.debug("Added translation chunk: %s", translated_text)
-                                            
-                        except json.JSONDecodeError as e:
-                            # Check if the raw response contains an error message
-                            if "Error during translation task" in response:
-                                logger.error("Translation API error: %s", response)
-                                raise ValueError(f"API Error: {response}")
-                            logger.warning("Failed to parse WebSocket message: %r", response)
-                            continue
-                            
-                    except asyncio.TimeoutError:
-                        raise ValueError("Translation timed out")
-                
-                # Check if we got any translation chunks
-                if not translated_chunks:
-                    logger.error("No translation chunks received in response")
-                    raise ValueError("No translation received")
-                
-                # Join all translation chunks
-                result = " ".join(translated_chunks)
-                logger.debug("Final translation: %s", result)
-                return result
+                except json.JSONDecodeError:
+                    if "Error during translation task" in response:
+                        logger.error("Translation API error: %s", response)
+                        raise ValueError(f"API Error: {response}")
+                    logger.error("Failed to parse WebSocket message: %r", response)
+                    raise ValueError("Invalid response format")
                 
         except WebSocketException as e:
             logger.error("WebSocket error during translation: %s", str(e))
