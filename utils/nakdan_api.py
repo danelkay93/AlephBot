@@ -41,35 +41,57 @@ def analyze_text(text: str, timeout: float = 10.0, max_length: int = 500) -> Nak
 
         data = _call_nakdan_api(text, timeout)
         
-        # Process API response for analysis and build vowelized text
+        # Process API response for analysis
         word_analysis = []
         vowelized_words = []
         
         for word_data in data:
             if isinstance(word_data, dict):
+                word = word_data.get('word', '')
                 options = word_data.get('options', [])
-                # Handle vowelized text
+                
+                # Get the first vowelized form for display
                 if options and isinstance(options[0], str):
                     vowelized_words.append(options[0])
-                elif word_data.get('sep'):  # Handle separators (spaces)
-                    vowelized_words.append(word_data.get('word', ''))
                 else:
-                    vowelized_words.append(word_data.get('word', ''))
+                    vowelized_words.append(word)
                 
-                # Handle word analysis
-                if options and isinstance(options[0], dict):
-                    option = options[0]
-                    word_analysis.append({
-                        'word': option.get('word', ''),
-                        'lemma': option.get('lemma', ''),
-                        'pos': option.get('partOfSpeech', ''),
-                        'gender': option.get('gender', ''),
-                        'number': option.get('number', ''),
-                        'person': option.get('person', ''),
-                        'tense': option.get('tense', '')
-                    })
-                else:
-                    word_analysis.append({})
+                # Extract morphological analysis
+                analysis = {
+                    'word': word,
+                    'lemma': '',
+                    'pos': '',
+                    'gender': '',
+                    'number': '',
+                    'person': '',
+                    'tense': ''
+                }
+                
+                # Parse the first option's analysis string
+                if options and isinstance(options[0], str):
+                    try:
+                        # Split analysis parts (typically separated by |)
+                        parts = options[0].split('|')
+                        if len(parts) > 1:
+                            # First part usually contains POS and basic features
+                            features = parts[0].split(' ')
+                            if features:
+                                analysis['pos'] = features[0]
+                                # Additional features may include gender, number, etc.
+                                for feature in features[1:]:
+                                    if 'זכר' in feature or 'נקבה' in feature:
+                                        analysis['gender'] = feature
+                                    elif 'יחיד' in feature or 'רבים' in feature:
+                                        analysis['number'] = feature
+                                    elif 'עבר' in feature or 'הווה' in feature or 'עתיד' in feature:
+                                        analysis['tense'] = feature
+                            # Second part might contain the lemma
+                            if len(parts) > 1:
+                                analysis['lemma'] = parts[1].strip()
+                    except Exception as e:
+                        logger.warning("Failed to parse morphological analysis: %s", e)
+                
+                word_analysis.append(analysis)
             else:
                 word_analysis.append({})
                 vowelized_words.append(str(word_data))
