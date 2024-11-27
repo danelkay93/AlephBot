@@ -35,6 +35,7 @@ discord_loggers = {
         'PUT /api',
         'DELETE /api',
         'PATCH /api',
+        'PUT https://discord.com/api/v10/applications',
         'Making request',
         'Request returned',
         'Response status',
