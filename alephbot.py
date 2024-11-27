@@ -57,6 +57,9 @@ async def register_commands(commands: List[commands.Command]) -> None:
         for cmd in commands:
             bot.tree.add_command(cmd, override=True)
             logger.info("Added command to tree: %s", cmd.name)
+    except Exception as e:
+        logger.error("Failed to register commands: %s", str(e))
+        raise
 
 async def sync_commands() -> Optional[List[discord.app_commands.Command]]:
     """Sync command tree globally."""
