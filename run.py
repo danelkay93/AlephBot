@@ -22,79 +22,32 @@ logging.basicConfig(
     ]
 )
 
-# Configure root discord logger first
+# Configure root discord logger
 discord_logger = logging.getLogger('discord')
 discord_logger.setLevel(logging.WARNING)
-discord_logger.propagate = False  # Prevent propagation to root logger
+discord_logger.propagate = False
 
-# Configure all Discord-related logging to be less verbose
+# Configure specific Discord loggers with filters
 discord_loggers = {
-    'discord.http': [
-        'GET /api',
-        'POST /api',
-        'PUT /api',
-        'DELETE /api',
-        'PATCH /api',
-        'PUT https://discord.com/api/v10/applications',
-        'Making request',
-        'Request returned',
-        'Response status',
-        'Received payload',
-        'Ratelimit bucket',
-        'WebSocket closed',
-    ],
-    'discord.gateway': [
-        'WebSocket Event',
-        'Dispatching event', 
-        'Shard ID',
-        'Keeping internal state',
-        'Got a request to',
-        'Got response',
-        'Received READY',
-        'Requesting member',
-        'Sending heartbeat',
-        'Received heartbeat',
-        'Keeping shard ID',
-        'For Shard ID',
-        'Shard ID',
-        'WebSocket Event',
-        'Received GUILD_',
-        'Received CHANNEL_',
-        'Received MESSAGE_',
-        'Received INTERACTION_',
-        'Received PRESENCE_',
-        'Client found matching',
-        'Requesting',
-        'Got a request',
-    ],
-    'discord.client': [
-        'on_socket',
-        'Scheduling',
-        'Cleaning up',
-        'Preparing',
-        'Processing',
-    ],
-    'discord.state': [
-        'Dispatching',
-        'Calling event',
-        'Processing raw',
-        'Creating member',
-    ]
+    'discord.http': ['GET /api', 'POST /api', 'PUT /api', 'DELETE /api', 'PATCH /api', 'PUT https://discord.com/api/v10/applications', 'Making request', 'Request returned', 'Response status', 'Received payload', 'Ratelimit bucket', 'WebSocket closed'],
+    'discord.gateway': ['WebSocket Event', 'Dispatching event', 'Shard ID', 'Keeping internal state', 'Got a request to', 'Got response', 'Received READY', 'Requesting member', 'Sending heartbeat', 'Received heartbeat', 'Keeping shard ID', 'For Shard ID', 'Shard ID', 'WebSocket Event', 'Received GUILD_', 'Received CHANNEL_', 'Received MESSAGE_', 'Received INTERACTION_', 'Received PRESENCE_', 'Client found matching', 'Requesting', 'Got a request'],
+    'discord.client': ['on_socket', 'Scheduling', 'Cleaning up', 'Preparing', 'Processing'],
+    'discord.state': ['Dispatching', 'Calling event', 'Processing raw', 'Creating member']
 }
 
-# Configure each Discord logger with specific filters
 for logger_name, filtered_msgs in discord_loggers.items():
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.WARNING)
-    logger.propagate = False  # Prevent propagation
-    logger.addFilter(lambda record: not any(x in record.getMessage() for x in filtered_msgs))
+    logger.propagate = False
+    logger.addFilter(lambda record, msgs=filtered_msgs: not any(msg in record.getMessage() for msg in msgs))
 
 # Suppress other noisy loggers
 noisy_loggers = ['watchdog', 'httpx', 'httpcore', 'websockets', 'asyncio', 'aiohttp']
 for logger_name in noisy_loggers:
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.WARNING)
-    logger.propagate = False  # Prevent propagation
+    logger.propagate = False
+
 logger = logging.getLogger(__name__)
 
 class BotReloader(FileSystemEventHandler):
