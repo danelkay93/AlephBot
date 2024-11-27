@@ -143,7 +143,7 @@ def _call_nakdan_api(text: str, timeout: float = 10.0) -> list[dict[str, Any]]:
     Raises:
         httpx.HTTPError: If the API request fails
     """
-    BASE_URL = "https://nakdan-5-1.loadbalancer.dicta.org.il"
+    BASE_URL = "https://nakdan-2-0.loadbalancer.dicta.org.il"
     url = f"{BASE_URL}/api"
     payload = {
         "task": "nakdan",
@@ -204,7 +204,7 @@ def get_nikud(text: str, timeout: float = 10.0, max_length: int = 500) -> Nakdan
             
         if not is_hebrew(text):
             return NakdanResponse(text="", error="Text must contain Hebrew characters")
-        BASE_URL = "https://nakdan-5-1.loadbalancer.dicta.org.il"
+        BASE_URL = "https://nakdan-2-0.loadbalancer.dicta.org.il"
         url = f"{BASE_URL}/api"
         payload: dict[str, str] = {
             "data": text,
