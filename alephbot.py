@@ -26,13 +26,12 @@ logging.getLogger('httpx').setLevel(logging.WARNING)
 logging.getLogger('httpcore').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
-# Initialize bot with required intents
+# Initialize bot with minimal required intents
 intents = discord.Intents.default()
 intents.message_content = True  # Enable message content intent
-intents.guilds = True  # Enable guilds intent
 intents.messages = True  # Enable messages intent
 
-bot = commands.Bot(command_prefix="/", intents=intents)  # Using "/" as prefix for consistency with slash commands
+bot = commands.Bot(command_prefix="/", intents=intents)
 
 # Sync commands on startup
 @bot.event
@@ -40,10 +39,13 @@ async def setup_hook():
     """Initialize bot and sync commands"""
     logger.info("Bot setup starting...")
     try:
-        # Register commands first
-        logger.info("Registering commands...")
+        # Clear existing commands first
+        logger.info("Clearing existing commands...")
+        bot.tree.clear_commands(guild=None)
+        await bot.tree.sync()
         
-        # Add all commands to the tree before syncing
+        # Register new commands
+        logger.info("Registering commands...")
         commands_to_add = [
             vowelize,
             analyze,
@@ -51,24 +53,28 @@ async def setup_hook():
         ]
         
         for cmd in commands_to_add:
-            if not bot.tree.get_command(cmd.name):
-                bot.tree.add_command(cmd)
-                logger.info("Added command: %s", cmd.name)
+            bot.tree.add_command(cmd)
+            logger.info("Added command: %s", cmd.name)
         
         # Sync with rate limit handling
-        try:
-            logger.info("Syncing command tree...")
-            synced = await bot.tree.sync()
-            logger.info("Successfully synced %d commands", len(synced))
-        except discord.HTTPException as e:
-            if e.status == 429:  # Rate limit error
-                logger.warning("Rate limited during sync, waiting to retry...")
-                await asyncio.sleep(e.retry_after + 1)
+        max_retries = 3
+        retry_count = 0
+        while retry_count < max_retries:
+            try:
+                logger.info("Syncing command tree (attempt %d/%d)...", retry_count + 1, max_retries)
                 synced = await bot.tree.sync()
-                logger.info("Retry successful, synced %d commands", len(synced))
-            else:
-                raise
-                
+                logger.info("Successfully synced %d commands: %s", 
+                          len(synced), 
+                          ", ".join(cmd.name for cmd in synced))
+                break
+            except discord.HTTPException as e:
+                if e.status == 429 and retry_count < max_retries - 1:  # Rate limit error
+                    retry_count += 1
+                    wait_time = e.retry_after + 1
+                    logger.warning("Rate limited during sync, waiting %.2f seconds...", wait_time)
+                    await asyncio.sleep(wait_time)
+                else:
+                    raise
     except Exception as e:
         logger.error("Failed during command registration: %s", e, exc_info=True)
         raise
