@@ -110,9 +110,16 @@ async def on_ready():
     for cmd in commands:
         logger.info("- /%s", cmd.name)
 
-@bot.tree.command(name='vowelize', description="Add niqqud to Hebrew text")
+@bot.tree.command(
+    name='vowelize',
+    description="Add niqqud (vowel points) to Hebrew text"
+)
 @commands.cooldown(1, 30, commands.BucketType.user)
-async def vowelize(interaction: discord.Interaction, text: str, *, timeout: float = DEFAULT_TIMEOUT) -> None:
+async def vowelize(
+    interaction: discord.Interaction,
+    text: str,
+    timeout: float = DEFAULT_TIMEOUT
+) -> None:
     logger.info("Vowelize command received from %s#%s (%s)", 
                 interaction.user.name, 
                 interaction.user.discriminator,
@@ -152,9 +159,16 @@ async def vowelize_error(ctx: Context, error: Exception | None) -> None:
         logger.error("Unexpected error in vowelize command: %s", error)
         await ctx.send("An unexpected error occurred. Please try again later.")
 
-@bot.tree.command(name='analyze', description="Analyze Hebrew text morphology")
-@commands.cooldown(1, 30, commands.BucketType.user)
-async def analyze(interaction: discord.Interaction, text: str, *, timeout: float = DEFAULT_TIMEOUT) -> None:
+@bot.tree.command(
+    name='analyze',
+    description="Analyze the morphology (grammar parts) of Hebrew text"
+)
+@commands.cooldown(1, 30, commands.BucketType.user) 
+async def analyze(
+    interaction: discord.Interaction,
+    text: str,
+    timeout: float = DEFAULT_TIMEOUT
+) -> None:
     logger.info("Analyze command received from %s#%s (%s)", 
                 interaction.user.name, 
                 interaction.user.discriminator,
@@ -226,9 +240,16 @@ async def analyze_error(ctx: Context, error: Exception | None) -> None:
         await ctx.send("An unexpected error occurred. Please try again later.")
 
 
-@bot.tree.command(name='lemmatize', description="Get the base/root form of Hebrew words")
+@bot.tree.command(
+    name='lemmatize',
+    description="Get the base/root forms of Hebrew words"
+)
 @commands.cooldown(1, 30, commands.BucketType.user)
-async def lemmatize(interaction: discord.Interaction, text: str, *, timeout: float = DEFAULT_TIMEOUT) -> None:
+async def lemmatize(
+    interaction: discord.Interaction,
+    text: str,
+    timeout: float = DEFAULT_TIMEOUT
+) -> None:
     logger.info("Lemmatize command received from %s#%s (%s)", 
                 interaction.user.name, 
                 interaction.user.discriminator,
@@ -278,7 +299,10 @@ async def lemmatize_error(ctx: Context, error: Exception | None) -> None:
         logger.error("Unexpected error in lemmatize command: %s", error)
         await ctx.send("An unexpected error occurred. Please try again later.")
 
-@bot.tree.command(name='translate', description="Translate between Hebrew and English")
+@bot.tree.command(
+    name='translate',
+    description="Translate text between Hebrew and English"
+)
 @commands.cooldown(1, 30, commands.BucketType.user)
 async def translate(
     interaction: discord.Interaction,
