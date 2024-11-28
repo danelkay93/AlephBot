@@ -137,19 +137,30 @@ def _call_nakdan_api(text: str, timeout: float = DEFAULT_TIMEOUT, task: str = "n
     Raises:
         httpx.HTTPError: If the API request fails
     """
-    url = "https://nakdan-for-morph-analysis.loadbalancer.dicta.org.il/addnikud"
-    payload = {
-        "task": task,
-        "apiKey": "3ab12a2f-80b3-450d-be66-8eb07748f9d2",
-        "data": text,
-        "genre": "modern",
-        "freturnfullmorphstr": True,
-        "addmorph": True,
-        "keepmetagim": True,
-        "keepnikud": True,
-        "keepqq": True,
-        "newjson": True
-    }
+    # Different endpoints and payloads for different tasks
+    if task == "nakdan-analyze":
+        url = "https://nakdan-for-morph-analysis.loadbalancer.dicta.org.il/addnikud"
+        payload = {
+            "task": task,
+            "apiKey": "3ab12a2f-80b3-450d-be66-8eb07748f9d2",
+            "data": text,
+            "genre": "modern",
+            "freturnfullmorphstr": True,
+            "addmorph": True,
+            "keepmetagim": True,
+            "keepnikud": True,
+            "keepqq": True,
+            "newjson": True
+        }
+    else:
+        # Default endpoint for vowelize/nikud
+        url = f"{NAKDAN_BASE_URL}/api"
+        payload = {
+            "task": task,
+            "apiKey": NAKDAN_API_KEY,
+            "data": text,
+            "genre": "modern"
+        }
     headers = {
         'Content-Type': 'application/json'
     }
