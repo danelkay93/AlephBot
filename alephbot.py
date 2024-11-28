@@ -66,25 +66,30 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
         original_text=text,
         color=Color.green()
     )
-    for i, word_analysis in enumerate(result.word_analysis, 1):
+    # Skip the last word as it's always the original text
+    for i, word_analysis in enumerate(result.word_analysis[:-1], 1):
         if not word_analysis:
             continue
+            
+        # Start with lemma as header if available
+        field_value = []
+        if word_analysis.get("lemma"):
+            field_value.append(f"### {word_analysis['lemma']}")
+            
+        # Add other morphological features
         for morph, value in word_analysis.items():
-            if not value:
+            if not value or morph == "lemma":
                 continue
-            if morph == "lemma":
-                embed.add_field(
-                    name=f"Word #{i}", 
-                    value=f"\n# {value}\n", 
-                    inline=False
-                )
-            elif value:  # Only show non-empty values
-                formatted_value = value.replace('_', ' ').title()
-                embed.add_field(
-                    name=f"Word #{i}",
-                    value=f"\n**{morph.replace('_', ' ').title()}:** {formatted_value}",
-                    inline=False
-                )
+            formatted_value = value.replace('_', ' ').title()
+            field_value.append(f"**{morph.replace('_', ' ').title()}:** {formatted_value}")
+            
+        # Add all details as one field per word
+        if field_value:
+            embed.add_field(
+                name=f"Word #{i}" if len(result.word_analysis) > 2 else "",  # Omit number if single word
+                value="\n".join(field_value),
+                inline=False
+            )
     await interaction.followup.send(embed=embed)
 
 @bot.tree.command(name="lemmatize", description="Get the base/root forms of Hebrew words")
