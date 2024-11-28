@@ -1,128 +1,83 @@
+# run.py
+"""
+File watcher and bot reloader for AlephBot.
+Automatically restarts the bot on file changes.
+"""
+import logging
 import sys
 import os
-import time
-import signal
 import asyncio
 from pathlib import Path
 from queue import Queue
+import signal
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
-import asyncio.subprocess
-import logging
-from typing import Optional
 from asyncio.subprocess import Process
+from utils.logging_config import configure_logging
 
-# Configure root logger
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('bot.log', encoding='utf-8')
-    ]
-)
-
-# Configure root discord logger
-discord_logger = logging.getLogger('discord')
-discord_logger.setLevel(logging.WARNING)
-discord_logger.propagate = False
-
-# Configure specific Discord loggers with filters
-discord_loggers = {
-    'discord.http': ['GET /api', 'POST /api', 'PUT /api', 'DELETE /api', 'PATCH /api', 'PUT https://discord.com/api/v10/applications', 'Making request', 'Request returned', 'Response status', 'Received payload', 'Ratelimit bucket', 'WebSocket closed'],
-    'discord.gateway': ['WebSocket Event', 'Dispatching event', 'Shard ID', 'Keeping internal state', 'Got a request to', 'Got response', 'Received READY', 'Requesting member', 'Sending heartbeat', 'Received heartbeat', 'Keeping shard ID', 'For Shard ID', 'Shard ID', 'WebSocket Event', 'Received GUILD_', 'Received CHANNEL_', 'Received MESSAGE_', 'Received INTERACTION_', 'Received PRESENCE_', 'Client found matching', 'Requesting', 'Got a request'],
-    'discord.client': ['on_socket', 'Scheduling', 'Cleaning up', 'Preparing', 'Processing'],
-    'discord.state': ['Dispatching', 'Calling event', 'Processing raw', 'Creating member']
-}
-
-for logger_name, filtered_msgs in discord_loggers.items():
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(logging.WARNING)
-    logger.propagate = False
-    logger.addFilter(lambda record, msgs=filtered_msgs: not any(msg in record.getMessage() for msg in msgs))
-
-# Suppress other noisy loggers
-noisy_loggers = ['watchdog', 'httpx', 'httpcore', 'websockets', 'asyncio', 'aiohttp']
-for logger_name in noisy_loggers:
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(logging.WARNING)
-    logger.propagate = False
+# Centralized logging configuration
+configure_logging("bot_reloader.log")
 
 logger = logging.getLogger(__name__)
 
 class BotReloader(FileSystemEventHandler):
+    """Handles bot process management and file modification detection."""
     def __init__(self, event_queue: Queue):
-        self.process: Optional[Process] = None
-        self.restart_lock = asyncio.Lock()
         self.event_queue = event_queue
-        # Initialize bot in the event loop
+        self.process: Process | None = None
+        self.restart_lock = asyncio.Lock()
+
+        # Start the bot on initialization
         asyncio.create_task(self.start_bot())
-        
-        # Set up signal handlers
+
+        # Handle termination signals
         signal.signal(signal.SIGINT, self.handle_signal)
         signal.signal(signal.SIGTERM, self.handle_signal)
 
     def handle_signal(self, signum: int, frame) -> None:
-        """Handle termination signals gracefully"""
-        logger.info(f"Received signal {signum}, shutting down...")
+        """Gracefully handle termination signals."""
+        logger.info(f"Received signal {signum}. Shutting down...")
         asyncio.create_task(self.cleanup())
         sys.exit(0)
 
     async def cleanup(self) -> None:
-        """Clean up resources before shutdown"""
+        """Clean up bot process resources."""
         if self.process:
             logger.info("Terminating bot process...")
             try:
                 self.process.terminate()
                 await asyncio.wait_for(self.process.wait(), timeout=5.0)
             except asyncio.TimeoutError:
-                logger.warning("Bot process did not terminate in time, forcing...")
+                logger.warning("Bot process did not terminate in time. Forcing termination...")
                 self.process.kill()
                 await self.process.wait()
 
     async def start_bot(self) -> None:
-        """Start the bot process with proper environment"""
+        """Start the bot process asynchronously."""
         await self.cleanup()
-        
+
         logger.info("Starting bot process...")
         env = os.environ.copy()
-        env['PYTHONUNBUFFERED'] = '1'  # Ensure output is not buffered
-        
+        env["PYTHONUNBUFFERED"] = "1"
+
         try:
-            # Add timeout to process startup
-            async with asyncio.timeout(60):  # 60 second timeout for startup
-                self.process = await asyncio.create_subprocess_exec(
-                    sys.executable,
-                    "alephbot.py",
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                    env=env
-                )
-                
-                if self.process.returncode is not None:
-                    raise RuntimeError(f"Bot process exited immediately with code {self.process.returncode}")
-                
-                # Start output monitoring
-                asyncio.create_task(self.monitor_output())
-                
-                # Wait for initial setup to complete
-                logger.info("Waiting for bot setup to complete...")
-                await asyncio.sleep(2)  # Reduced wait time
-                
-                if self.process.returncode is not None:
-                    raise RuntimeError(f"Bot process terminated during setup with code {self.process.returncode}")
-                
-        except asyncio.TimeoutError:
-            logger.error("Bot startup timed out after 60 seconds")
-            await self.cleanup()
-            raise
+            self.process = await asyncio.create_subprocess_exec(
+                sys.executable,
+                "alephbot.py",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=env,
+            )
+            asyncio.create_task(self.monitor_output())
+
+            logger.info("Bot process started successfully.")
         except Exception as e:
-            logger.error("Failed to start bot process: %s", str(e))
+            logger.error(f"Failed to start bot process: {e}")
             await self.cleanup()
             raise
 
     async def monitor_output(self) -> None:
-        """Monitor bot process output and log it"""
+        """Monitor bot process output and log it."""
         if not self.process or not self.process.stdout or not self.process.stderr:
             return
 
@@ -133,52 +88,32 @@ class BotReloader(FileSystemEventHandler):
                     break
                 msg = line.decode().strip()
                 if msg:
-                    if level == logging.ERROR:
-                        logger.error("Bot Error: %s", msg)
-                    else:
-                        logger.info("Bot: %s", msg)
+                    logger.log(level, msg)
 
-        try:
-            # Create tasks to read both streams concurrently
-            stdout_task = asyncio.create_task(read_stream(self.process.stdout, logging.INFO))
-            stderr_task = asyncio.create_task(read_stream(self.process.stderr, logging.ERROR))
-            
-            # Wait for process to complete and streams to be fully read
-            await self.process.wait()
-            await stdout_task
-            await stderr_task
-            
-        except Exception as e:
-            logger.error("Error monitoring output: %s", e, exc_info=True)
+        await asyncio.gather(
+            read_stream(self.process.stdout, logging.INFO),
+            read_stream(self.process.stderr, logging.ERROR),
+        )
 
     async def handle_modified(self, event: FileModifiedEvent) -> None:
-        """Handle file modification events with debouncing"""
-        if not event.src_path.endswith('.py'):
+        """Handle file modifications and restart the bot."""
+        if not event.src_path.endswith(".py"):
             return
-            
-        async with self.restart_lock:  # Prevent multiple simultaneous restarts
-            logger.info(f"Detected change in {event.src_path}")
+
+        async with self.restart_lock:
+            logger.info(f"Detected file change: {event.src_path}")
             await self.start_bot()
 
     def on_modified(self, event: FileModifiedEvent) -> None:
-        """Override watchdog's on_modified to queue events"""
-        # Only watch specific bot-related files
-        watched_files = {
-            'alephbot.py',
-            str(Path('utils/nakdan_api.py')),
-            str(Path('utils/config.py')),
-            str(Path('utils/hebrew.py')),
-            str(Path('utils/dicta_api.py'))
-        }
-        if any(event.src_path.endswith(file) for file in watched_files):
-            logger.info(f"Detected change in watched file: {event.src_path}")
+        """Handle file modification events and queue them."""
+        if any(event.src_path.endswith(file) for file in ["alephbot.py", "utils/config.py"]):
+            logger.info(f"Change detected in {event.src_path}")
             self.event_queue.put(event)
 
 async def process_events(event_queue: Queue, reloader: BotReloader) -> None:
-    """Process file modification events from the queue"""
+    """Process file modification events from the queue."""
     while True:
         try:
-            # Non-blocking check for events
             while not event_queue.empty():
                 event = event_queue.get_nowait()
                 await reloader.handle_modified(event)
@@ -188,35 +123,29 @@ async def process_events(event_queue: Queue, reloader: BotReloader) -> None:
             await asyncio.sleep(1)
 
 async def main() -> None:
-    """Main async function to run the reloader"""
-    path = Path.cwd()
+    """Main function to initialize file watcher and event processing."""
     event_queue: Queue = Queue()
     event_handler = BotReloader(event_queue)
     observer = Observer()
-    # Watch only the main directory and utils subdirectory
-    observer.schedule(event_handler, path=str(path), recursive=False)
-    utils_path = path / 'utils'
+
+    # Watch the current directory and utils subdirectory
+    path = Path.cwd()
+    observer.schedule(event_handler, str(path), recursive=False)
+    utils_path = path / "utils"
     if utils_path.exists():
-        observer.schedule(event_handler, path=str(utils_path), recursive=False)
+        observer.schedule(event_handler, str(utils_path), recursive=False)
+
     observer.start()
 
     try:
-        # Start event processing task
-        event_processor = asyncio.create_task(process_events(event_queue, event_handler))
-        
-        # Keep main loop running
-        while True:
-            await asyncio.sleep(1)
-    except asyncio.CancelledError:
-        logger.info("Shutting down...")
+        await process_events(event_queue, event_handler)
     finally:
-        event_processor.cancel()
         observer.stop()
-        event_handler.cleanup()
+        await event_handler.cleanup()
         observer.join()
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("Received keyboard interrupt, exiting...")
+        logger.info("Keyboard interrupt received. Exiting...")

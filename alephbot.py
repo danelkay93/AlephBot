@@ -96,7 +96,7 @@ async def lemmatize(interaction: discord.Interaction, text: str) -> None:
 class GenreSelect(ui.Select):
     def __init__(self):
         options = [
-            SelectOption(label="Modern", value="modern", description="Modern Hebrew/English", default=True),
+            SelectOption(label="Modern", value="modern-fancy", description="Modern Hebrew/English", default=True),
             SelectOption(label="Biblical", value="biblical", description="Biblical Hebrew"),
             SelectOption(label="Mishnaic", value="mishnaic", description="Mishnaic Hebrew"),
             SelectOption(label="Poetry", value="poetry", description="Poetic Hebrew")
@@ -134,7 +134,7 @@ async def translate(interaction: discord.Interaction, text: str) -> None:
     view = TranslationView()
     
     # Store selected genre
-    selected_genre = ["modern"]  # Default genre
+    selected_genre = ["modern-fancy"]  # Default genre
     
     async def genre_callback(interaction: discord.Interaction):
         selected_genre[0] = interaction.data["values"][0]
