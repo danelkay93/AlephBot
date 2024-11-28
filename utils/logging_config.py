@@ -5,15 +5,22 @@ Centralized logging configuration for the bot project.
 import logging
 import sys
 
-def configure_logging(log_file: str = 'bot.log', level: int = logging.DEBUG) -> None:
+def configure_logging(log_file: str = 'bot.log', level: int = logging.DEBUG, **kwargs) -> None:
     """Configure centralized logging for the bot."""
+    handlers = [
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(log_file, encoding='utf-8')
+    ]
+    
+    for handler in handlers:
+        handler.setFormatter(
+            logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        )
+    
     logging.basicConfig(
         level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler(log_file, encoding='utf-8'),
-        ]
+        handlers=handlers,
+        **kwargs
     )
 
     # Suppress noisy loggers

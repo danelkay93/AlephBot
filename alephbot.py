@@ -43,7 +43,7 @@ async def vowelize(interaction: discord.Interaction, text: str) -> None:
     """Adds niqqud to the provided Hebrew text using Nakdan API."""
     logger.info("Vowelize command triggered by %s (%s)", interaction.user.global_name, interaction.user.id)
     await interaction.response.defer()
-    result = analyze_text(text, timeout=DEFAULT_TIMEOUT, max_length=MAX_TEXT_LENGTH)
+    result = get_nikud(text, timeout=DEFAULT_TIMEOUT, max_length=MAX_TEXT_LENGTH)
     if result.error:
         await handle_hebrew_command_error(interaction, result.error)
         return
@@ -72,14 +72,19 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
         for morph, value in word_analysis.items():
             if not value:
                 continue
-            elif morph == "lemma":
+            if morph == "lemma":
                 embed.add_field(
-                    name=f"Word #{i}", value=f"\n**{morph}:** #{value}", inline=False
+                    name=f"Word #{i}", 
+                    value=f"\n# {value}\n", 
+                    inline=False
                 )
-            else:
-                embed.add_field(name=f"Word #{i}",
-                            value=f"\n**{morph}:** {value}",
-                            inline=False)
+            elif value:  # Only show non-empty values
+                formatted_value = value.replace('_', ' ').title()
+                embed.add_field(
+                    name=f"Word #{i}",
+                    value=f"\n**{morph.replace('_', ' ').title()}:** {formatted_value}",
+                    inline=False
+                )
     await interaction.followup.send(embed=embed)
 
 @bot.tree.command(name="lemmatize", description="Get the base/root forms of Hebrew words")
