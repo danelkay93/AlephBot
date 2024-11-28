@@ -36,7 +36,7 @@ def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = 
         if not is_hebrew(text):
             return NakdanResponse(text="", error=ERROR_MESSAGES["non_hebrew"])
 
-        data = _call_nakdan_api(text, timeout, task="nakdan-analyze")
+        data = _call_nakdan_api(text, timeout, task="analyze")
         
         # Process API response for analysis
         word_analysis = []
@@ -138,7 +138,7 @@ def _call_nakdan_api(text: str, timeout: float = DEFAULT_TIMEOUT, task: str = "n
         httpx.HTTPError: If the API request fails
     """
     # Different endpoints and payloads for different tasks
-    if task == "nakdan-analyze":
+    if task == "analyze":
         url = "https://nakdan-for-morph-analysis.loadbalancer.dicta.org.il/addnikud"
         payload = {
             "task": task,
@@ -157,7 +157,6 @@ def _call_nakdan_api(text: str, timeout: float = DEFAULT_TIMEOUT, task: str = "n
         url = f"{NAKDAN_BASE_URL}/api"
         payload = {
             "task": task,
-            "apiKey": NAKDAN_API_KEY,
             "data": text,
             "genre": "modern"
         }
@@ -211,7 +210,7 @@ def get_lemmas(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MA
         if not is_hebrew(text):
             return NakdanResponse(text="", error=ERROR_MESSAGES["non_hebrew"])
 
-        data = _call_nakdan_api(text, timeout, task="nakdan-analyze")
+        data = _call_nakdan_api(text, timeout, task="analyze")
         
         # Process API response for lemmatization
         lemmatized_words = []
