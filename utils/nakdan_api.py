@@ -137,10 +137,10 @@ def _call_nakdan_api(text: str, timeout: float = DEFAULT_TIMEOUT, task: str = "n
     Raises:
         httpx.HTTPError: If the API request fails
     """
-    url = f"{NAKDAN_BASE_URL}/api"
+    url = "https://nakdan-for-morph-analysis.loadbalancer.dicta.org.il/addnikud"
     payload = {
         "task": task,
-        "apiKey": NAKDAN_API_KEY,
+        "apiKey": "3ab12a2f-80b3-450d-be66-8eb07748f9d2",
         "data": text,
         "genre": "modern",
         "freturnfullmorphstr": True,
