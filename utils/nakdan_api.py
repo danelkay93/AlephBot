@@ -65,24 +65,66 @@ def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = 
                     'tense': ''
                 }
                 
+                # Parse the word for prefixes and suffixes
+                word_parts = word.split('|')
+                analysis = {
+                    'word': word,
+                    'prefix': '',
+                    'suffix': '',
+                    'menukad': '',
+                    'lemma': '',
+                    'pos': '',
+                    'gender': '',
+                    'number': '',
+                    'person': '',
+                    'status': '',
+                    'tense': '',
+                    'binyan': '',
+                    'suf_gender': '',
+                    'suf_person': '',
+                    'suf_number': ''
+                }
+                
+                # Handle prefixes and suffixes
+                if len(word_parts) > 1:
+                    if word_parts[0]:  # Has prefix
+                        analysis['prefix'] = word_parts[0]
+                    main_word = word_parts[1]
+                    if len(word_parts) > 2:  # Has suffix
+                        analysis['suffix'] = word_parts[-1]
+                        main_word = '|'.join(word_parts[1:-1])
+                    analysis['menukad'] = main_word
+                else:
+                    analysis['menukad'] = word
+                
                 # Parse the BGU field for morphological analysis
                 if 'BGU' in word_data:
                     try:
-                        # Split BGU data into header and content
                         bgu_lines = word_data['BGU'].strip().split('\n')
                         if len(bgu_lines) >= 2:
                             headers = bgu_lines[0].split('\t')
                             values = bgu_lines[1].split('\t')
-                            
-                            # Create a dictionary from headers and values
                             bgu_data = dict(zip(headers, values))
                             
-                            analysis['lemma'] = bgu_data.get('lex', '')
-                            analysis['pos'] = bgu_data.get('POS', '')
-                            analysis['gender'] = bgu_data.get('Gender', '')
-                            analysis['number'] = bgu_data.get('Number', '')
-                            analysis['person'] = bgu_data.get('Person', '')
-                            analysis['tense'] = bgu_data.get('Tense', '')
+                            # Map BGU fields to our analysis
+                            analysis.update({
+                                'lemma': bgu_data.get('lex', ''),
+                                'pos': bgu_data.get('POS', ''),
+                                'gender': bgu_data.get('Gender', ''),
+                                'number': bgu_data.get('Number', ''),
+                                'person': bgu_data.get('Person', ''),
+                                'tense': bgu_data.get('Tense', ''),
+                                'binyan': bgu_data.get('Binyan', ''),
+                                'status': bgu_data.get('Status', '')
+                            })
+                            
+                            # Handle suffix features if present
+                            if analysis['suffix']:
+                                analysis.update({
+                                    'suf_gender': bgu_data.get('Suf_Gender', ''),
+                                    'suf_person': bgu_data.get('Suf_Person', ''),
+                                    'suf_number': bgu_data.get('Suf_Number', '')
+                                })
                     except Exception as e:
                         logger.warning("Failed to parse morphological analysis: %s", e)
                 

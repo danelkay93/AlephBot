@@ -15,6 +15,7 @@ from utils.discord_helpers import (
 from utils.hebrew_constants import (
     HebrewFeatures, EmbedTitles, ERROR_MESSAGES, DEFAULT_TIMEOUT, MAX_TEXT_LENGTH
 )
+from utils.hebrew_labels import HebrewLabels
 import discord
 from discord.ext import commands
 from discord import Embed, Color, SelectOption, ui
@@ -71,26 +72,50 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
         if not word_analysis:
             continue
             
-        # Format all morphological features
+        # Format morphological features
         field_value = []
         
-        # Add lemma first if available
-        if word_analysis.get("lemma"):
-            field_value.append(f"**Base Form:** {word_analysis['lemma']}")
+        # Handle prefixes if present
+        if word_analysis.get("prefix"):
+            field_value.append(f"**{HebrewLabels.PREFIX} | Prefix:** {word_analysis['prefix']}")
             
-        # Add other morphological features in specific order
+        # Add vowelized form and base form
+        if word_analysis.get("menukad"):
+            field_value.append(f"**{HebrewLabels.VOWELIZED} | Vowelized:** {word_analysis['menukad']}")
+        if word_analysis.get("lemma"):
+            field_value.append(f"**{HebrewLabels.BASE_FORM} | Base Form:** {word_analysis['lemma']}")
+        
+        # Add morphological features in specific order
         feature_order = {
-            "pos": "Part of Speech",
-            "gender": "Gender",
-            "number": "Number",
-            "person": "Person",
-            "tense": "Tense"
+            "pos": (HebrewLabels.PART_OF_SPEECH, "Part of Speech"),
+            "gender": (HebrewLabels.GENDER, "Gender"),
+            "number": (HebrewLabels.NUMBER, "Number"),
+            "person": (HebrewLabels.PERSON, "Person"),
+            "status": (HebrewLabels.STATUS, "Status"),
+            "tense": (HebrewLabels.TENSE, "Tense"),
+            "binyan": (HebrewLabels.BINYAN, "Binyan")
         }
         
-        for morph, display_name in feature_order.items():
+        for morph, (heb_label, eng_label) in feature_order.items():
             if word_analysis.get(morph):
                 formatted_value = word_analysis[morph].replace('_', ' ').title()
-                field_value.append(f"**{display_name}:** {formatted_value}")
+                field_value.append(f"**{heb_label} | {eng_label}:** {formatted_value}")
+        
+        # Handle suffixes and their features if present
+        if word_analysis.get("suffix"):
+            field_value.append(f"**{HebrewLabels.SUFFIX} | Suffix:** {word_analysis['suffix']}")
+            
+            # Add suffix features
+            suffix_features = {
+                "suf_gender": (HebrewLabels.SUFFIX_GENDER, "Suffix Gender"),
+                "suf_person": (HebrewLabels.SUFFIX_PERSON, "Suffix Person"),
+                "suf_number": (HebrewLabels.SUFFIX_NUMBER, "Suffix Number")
+            }
+            
+            for feat, (heb_label, eng_label) in suffix_features.items():
+                if word_analysis.get(feat):
+                    formatted_value = word_analysis[feat].replace('_', ' ').title()
+                    field_value.append(f"**{heb_label} | {eng_label}:** {formatted_value}")
             
         # Add all details as one field per word
         if field_value:
