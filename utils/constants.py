@@ -8,7 +8,7 @@ API_TIMEOUT = 10.0
 MAX_RETRIES = 3
 
 # API Payload Settings
-DEFAULT_GENRE = "modern"
+DEFAULT_GENRE = "modern-fancy"
 DEFAULT_TASK = "nakdan"
 ANALYZE_TASK = "nakdan-analyze"
 LEMMATIZE_TASK = "nakdan"
