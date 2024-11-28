@@ -69,11 +69,17 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
     for i, word_analysis in enumerate(result.word_analysis, 1):
         if not word_analysis:
             continue
-        embed.add_field(
-            name=f"Word #{i}",
-            value="\n".join(f"**{k}:** {v}" for k, v in word_analysis.items() if v),
-            inline=False
-        )
+        for morph, value in word_analysis.items():
+            if not value:
+                continue
+            elif morph == "lemma":
+                embed.add_field(
+                    name=f"Word #{i}", value=f"\n**{morph}:** #{value}", inline=False
+                )
+            else:
+                embed.add_field(name=f"Word #{i}",
+                            value=f"\n**{morph}:** {value}",
+                            inline=False)
     await interaction.followup.send(embed=embed)
 
 @bot.tree.command(name="lemmatize", description="Get the base/root forms of Hebrew words")
