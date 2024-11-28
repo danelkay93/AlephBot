@@ -64,28 +64,24 @@ def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = 
                     'tense': ''
                 }
                 
-                # Parse the morphological analysis from options
-                if options and isinstance(options[0], list):
+                # Parse the BGU field for morphological analysis
+                if 'BGU' in word_data:
                     try:
-                        first_option = options[0]
-                        if len(first_option) >= 2 and isinstance(first_option[1], list):
-                            morph_data = first_option[1]
-                            if len(morph_data) >= 2:
-                                # Extract lemma from first element
-                                analysis['lemma'] = morph_data[0][1] if len(morph_data[0]) > 1 else ''
-                                
-                                # Extract POS and features from second element
-                                if len(morph_data) > 1:
-                                    features = morph_data[1][1].split(' ') if len(morph_data[1]) > 1 else []
-                                    if features:
-                                        analysis['pos'] = features[0]
-                                        for feature in features[1:]:
-                                            if any(gender in feature for gender in ['זכר', 'נקבה']):
-                                                analysis['gender'] = feature
-                                            elif any(number in feature for number in ['יחיד', 'רבים']):
-                                                analysis['number'] = feature
-                                            elif any(tense in feature for tense in ['עבר', 'הווה', 'עתיד']):
-                                                analysis['tense'] = feature
+                        # Split BGU data into header and content
+                        bgu_lines = word_data['BGU'].strip().split('\n')
+                        if len(bgu_lines) >= 2:
+                            headers = bgu_lines[0].split('\t')
+                            values = bgu_lines[1].split('\t')
+                            
+                            # Create a dictionary from headers and values
+                            bgu_data = dict(zip(headers, values))
+                            
+                            analysis['lemma'] = bgu_data.get('lex', '')
+                            analysis['pos'] = bgu_data.get('POS', '')
+                            analysis['gender'] = bgu_data.get('Gender', '')
+                            analysis['number'] = bgu_data.get('Number', '')
+                            analysis['person'] = bgu_data.get('Person', '')
+                            analysis['tense'] = bgu_data.get('Tense', '')
                     except Exception as e:
                         logger.warning("Failed to parse morphological analysis: %s", e)
                 
@@ -141,12 +137,20 @@ def _call_nakdan_api(text: str, timeout: float = DEFAULT_TIMEOUT, task: str = "n
         httpx.HTTPError: If the API request fails
     """
     url = f"{NAKDAN_BASE_URL}/api"
-    payload = NakdanAPIPayload(
-        task=task,
-        data=text
-    ).model_dump()
+    payload = {
+        "task": task,
+        "apiKey": NAKDAN_API_KEY,
+        "data": text,
+        "genre": "modern",
+        "freturnfullmorphstr": True,
+        "addmorph": True,
+        "keepmetagim": True,
+        "keepnikud": True,
+        "keepqq": True,
+        "newjson": True
+    }
     headers = {
-        'Content-Type': 'text/plain;charset=UTF-8'
+        'Content-Type': 'application/json'
     }
     
     # Format Hebrew text for logging

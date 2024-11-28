@@ -1,8 +1,9 @@
 """Constants used throughout the AlephBot application."""
 
 # API Settings
-NAKDAN_BASE_URL = "https://nakdan-2-0.loadbalancer.dicta.org.il"
-NAKDAN_API_ENDPOINT = f"{NAKDAN_BASE_URL}/api"
+NAKDAN_BASE_URL = "https://nakdan-for-morph-analysis.loadbalancer.dicta.org.il"
+NAKDAN_API_ENDPOINT = f"{NAKDAN_BASE_URL}/addnikud"
+NAKDAN_API_KEY = "3ab12a2f-80b3-450d-be66-8eb07748f9d2"
 MAX_TEXT_LENGTH = 500
 API_TIMEOUT = 10.0
 MAX_RETRIES = 3
