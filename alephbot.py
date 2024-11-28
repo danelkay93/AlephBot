@@ -71,17 +71,26 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
         if not word_analysis:
             continue
             
-        # Start with lemma as header if available
+        # Format all morphological features
         field_value = []
+        
+        # Add lemma first if available
         if word_analysis.get("lemma"):
-            field_value.append(f"### {word_analysis['lemma']}")
+            field_value.append(f"**Base Form:** {word_analysis['lemma']}")
             
-        # Add other morphological features
-        for morph, value in word_analysis.items():
-            if not value or morph == "lemma":
-                continue
-            formatted_value = value.replace('_', ' ').title()
-            field_value.append(f"**{morph.replace('_', ' ').title()}:** {formatted_value}")
+        # Add other morphological features in specific order
+        feature_order = {
+            "pos": "Part of Speech",
+            "gender": "Gender",
+            "number": "Number",
+            "person": "Person",
+            "tense": "Tense"
+        }
+        
+        for morph, display_name in feature_order.items():
+            if word_analysis.get(morph):
+                formatted_value = word_analysis[morph].replace('_', ' ').title()
+                field_value.append(f"**{display_name}:** {formatted_value}")
             
         # Add all details as one field per word
         if field_value:
