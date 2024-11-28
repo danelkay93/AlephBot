@@ -14,7 +14,7 @@ class HebrewFeatures(StrEnum):
 class EmbedTitles(StrEnum):
     """Discord embed titles"""
     VOWELIZE = "הַנּוֹסֵחַ הַמְּנֻוקָּד | Vowelized Text"
-    MORPHOLOGY = "ניתוח דקדוקי | Morphological Analysis"
+    MORPHOLOGICAL_ANALYSIS = "ניתוח דקדוקי | Morphological Analysis"
     LEMMATIZE = "שורשים ובסיסי מילים | Word Roots & Base Forms"
 
 # API Constants
