@@ -16,7 +16,7 @@ from asyncio.subprocess import Process
 from utils.logging_config import configure_logging
 
 # Centralized logging configuration
-configure_logging("bot_reloader.log")
+configure_logging("bot_reloader.log", encoding='utf-8')
 
 logger = logging.getLogger(__name__)
 

@@ -61,10 +61,10 @@ async def analyze(interaction: discord.Interaction, text: str) -> None:
     if result.error:
         await handle_hebrew_command_error(interaction, result.error)
         return
-    embed = Embed(
+    embed = create_hebrew_embed(
         title=EmbedTitles.MORPHOLOGICAL_ANALYSIS,
-        color=Color.green(),
-        description=f"**Text to analyze:**\n```{text}```"
+        original_text=text,
+        color=Color.green()
     )
     for i, word_analysis in enumerate(result.word_analysis, 1):
         if not word_analysis:
