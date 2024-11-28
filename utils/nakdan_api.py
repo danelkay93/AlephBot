@@ -9,6 +9,7 @@ from .hebrew_constants import (
     NAKDAN_BASE_URL, MAX_TEXT_LENGTH, DEFAULT_TIMEOUT,
     HebrewFeatures, ERROR_MESSAGES
 )
+from .constants import NAKDAN_API_KEY
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
