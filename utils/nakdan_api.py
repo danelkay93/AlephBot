@@ -14,8 +14,8 @@ from .constants import NAKDAN_API_KEY
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-def _validate_text(text: str, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse | None:
-    """Validates Hebrew text input and returns error response if invalid."""
+def _check_text_requirements(text: str, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse | None:
+    """Checks if text meets basic requirements (non-empty, length, Hebrew chars)."""
     if not text.strip():
         return NakdanResponse(text="", error=ERROR_MESSAGES["empty_text"])
     
@@ -40,7 +40,7 @@ def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = 
         NakdanResponse containing analysis results or error message
     """
     try:
-        if error_response := _validate_text(text, max_length):
+        if error_response := _check_text_requirements(text, max_length):
             return error_response
 
         data = _call_nakdan_api(text, timeout, task="analyze")
