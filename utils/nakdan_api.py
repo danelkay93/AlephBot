@@ -1,4 +1,5 @@
-from typing import Any
+from typing import Any, Optional
+import os
 import httpx
 import logging
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -9,7 +10,11 @@ from .hebrew_constants import (
     NAKDAN_BASE_URL, MAX_TEXT_LENGTH, DEFAULT_TIMEOUT,
     HebrewFeatures, ERROR_MESSAGES
 )
-from .constants import NAKDAN_API_KEY
+
+# Load API key from environment
+NAKDAN_API_KEY = os.getenv('NAKDAN_API_KEY')
+if not NAKDAN_API_KEY:
+    raise ValueError("NAKDAN_API_KEY environment variable not set")
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -152,14 +157,8 @@ def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = 
             word_analysis=word_analysis
         )
 
-    except httpx.HTTPError as e:
-        error_msg = f"Connection error: {str(e)}"
-        logger.error("HTTP error occurred while calling Nakdan API: %s", str(e), exc_info=True)
-        return NakdanResponse(text="", error=error_msg)
     except Exception as e:
-        error_msg = f"Processing error: {str(e)}"
-        logger.error("Error analyzing text with Nakdan API: %s", str(e), exc_info=True)
-        return NakdanResponse(text="", error=error_msg)
+        return _handle_api_error(e, "analyzing text")
 
 def is_hebrew(text: str) -> bool:
     """Check if string contains Hebrew characters using the hebrew package."""
@@ -295,14 +294,8 @@ def get_lemmas(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MA
             word_analysis=word_analysis
         )
 
-    except httpx.HTTPError as e:
-        error_msg = f"Connection error: {str(e)}"
-        logger.error("HTTP error occurred while calling Nakdan API: %s", str(e), exc_info=True)
-        return NakdanResponse(text="", error=error_msg)
     except Exception as e:
-        error_msg = f"Processing error: {str(e)}"
-        logger.error("Error getting lemmas with Nakdan API: %s", str(e), exc_info=True)
-        return NakdanResponse(text="", error=error_msg)
+        return _handle_api_error(e, "getting lemmas")
 
 def get_nikud(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse:
     """
@@ -378,15 +371,17 @@ def get_nikud(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX
             word_analysis=[]  # Empty for vowelize command
         )
 
-    except httpx.HTTPError as e:
-        error_msg = f"Connection error: {str(e)}"
-        logger.error("HTTP error occurred while calling Nakdan API: %s", str(e), exc_info=True)
-        return NakdanResponse(text="", error=error_msg)
-    except KeyError as e:
-        error_msg = f"Invalid API response format: {str(e)}"
-        logger.error("Failed to parse Nakdan API response: %s", str(e), exc_info=True)
-        return NakdanResponse(text="", error=error_msg)
     except Exception as e:
+        return _handle_api_error(e, "adding nikud")
+def _handle_api_error(e: Exception, operation: str) -> NakdanResponse:
+    """Centralized error handling for API operations."""
+    if isinstance(e, httpx.HTTPError):
+        error_msg = f"Connection error: {str(e)}"
+        logger.error("HTTP error occurred while %s: %s", operation, str(e), exc_info=True)
+    elif isinstance(e, KeyError):
+        error_msg = f"Invalid API response format: {str(e)}"
+        logger.error("Failed to parse response while %s: %s", operation, str(e), exc_info=True)
+    else:
         error_msg = f"Processing error: {str(e)}"
-        logger.error("Error processing text with Nakdan API: %s", str(e), exc_info=True)
-        return NakdanResponse(text="", error=error_msg)
+        logger.error("Error while %s: %s", operation, str(e), exc_info=True)
+    return NakdanResponse(text="", error=error_msg)
