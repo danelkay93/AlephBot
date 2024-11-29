@@ -1,4 +1,4 @@
-from typing import Any, Optional, Dict, List, Union
+from typing import Any, Optional, Dict, List, Union, cast
 import os
 import httpx
 import logging
@@ -13,6 +13,10 @@ from .hebrew_constants import (
 from .nakdan_exceptions import (
     NakdanAPIError, NakdanConnectionError,
     NakdanResponseError, NakdanValidationError
+)
+from .nakdan_types import (
+    NakdanTask, MorphData, WordOption,
+    NakdanAPIResponse
 )
 
 # Load API key from environment
@@ -83,7 +87,7 @@ def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = 
                 
                 # Parse the word for prefixes and suffixes
                 word_parts = word.split('|')
-                analysis = {
+                analysis: MorphData = {
                     'word': word,
                     'prefix': '',
                     'suffix': '',
@@ -174,7 +178,11 @@ def is_hebrew(text: str) -> bool:
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=4, max=10)
 )
-def _call_nakdan_api(text: str, timeout: float = DEFAULT_TIMEOUT, task: str = "nakdan") -> list[dict[str, Any]]:
+def _call_nakdan_api(
+    text: str,
+    timeout: float = DEFAULT_TIMEOUT,
+    task: NakdanTask = NakdanTask.NAKDAN
+) -> NakdanAPIResponse:
     """
     Makes the actual API call to Nakdan service.
     
@@ -236,7 +244,23 @@ def _call_nakdan_api(text: str, timeout: float = DEFAULT_TIMEOUT, task: str = "n
         except Exception as e:
             logger.error("Failed to format response for logging: %s", e)
             logger.debug("Raw Response Content: %r", response.text)
-        return response.json()
+        response_data = response.json()
+        
+        # Validate response structure
+        if not isinstance(response_data, list):
+            raise NakdanResponseError("Invalid response format: expected list")
+            
+        # Validate each word in response
+        for item in response_data:
+            if isinstance(item, dict):
+                if 'word' not in item:
+                    raise NakdanResponseError("Invalid word data: missing 'word' field")
+                if 'options' not in item:
+                    raise NakdanResponseError("Invalid word data: missing 'options' field")
+            elif not isinstance(item, str):
+                raise NakdanResponseError(f"Invalid response item type: {type(item)}")
+        
+        return cast(NakdanAPIResponse, response_data)
 
 def get_lemmas(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse:
     """
