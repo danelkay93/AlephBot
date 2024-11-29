@@ -4,7 +4,7 @@ import logging
 from tenacity import retry, stop_after_attempt, wait_exponential
 from hebrew import Hebrew
 
-from .models import NakdanResponse, NakdanAPIPayload, MorphologicalFeatures
+from .models import NakdanResponse, MorphologicalFeatures
 from .hebrew_constants import (
     NAKDAN_BASE_URL, MAX_TEXT_LENGTH, DEFAULT_TIMEOUT,
     HebrewFeatures, ERROR_MESSAGES
@@ -13,6 +13,19 @@ from .constants import NAKDAN_API_KEY
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+def _validate_text(text: str, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse | None:
+    """Validates Hebrew text input and returns error response if invalid."""
+    if not text.strip():
+        return NakdanResponse(text="", error=ERROR_MESSAGES["empty_text"])
+    
+    if len(text) > max_length:
+        return NakdanResponse(text="", error=ERROR_MESSAGES["text_too_long"])
+        
+    if not is_hebrew(text):
+        return NakdanResponse(text="", error=ERROR_MESSAGES["non_hebrew"])
+    
+    return None
 
 def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse:
     """
@@ -27,14 +40,8 @@ def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = 
         NakdanResponse containing analysis results or error message
     """
     try:
-        if not text.strip():
-            return NakdanResponse(text="", error=ERROR_MESSAGES["empty_text"])
-        
-        if len(text) > MAX_TEXT_LENGTH:
-            return NakdanResponse(text="", error=ERROR_MESSAGES["text_too_long"])
-            
-        if not is_hebrew(text):
-            return NakdanResponse(text="", error=ERROR_MESSAGES["non_hebrew"])
+        if error_response := _validate_text(text, max_length):
+            return error_response
 
         data = _call_nakdan_api(text, timeout, task="analyze")
         
