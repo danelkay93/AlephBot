@@ -8,7 +8,7 @@ from utils.bot_utils import initialize_bot, start_bot
 from utils.logging_config import configure_logging
 from utils.config import settings
 from utils.nakdan_api import analyze_text, get_nikud, get_lemmas
-from utils.dicta_api import DictaTranslateAPI
+from utils.dicta_api import DictaAPI
 from utils.discord_helpers import (
     handle_command_error, create_hebrew_embed, handle_hebrew_command_error
 )
@@ -233,7 +233,7 @@ async def invite(interaction: discord.Interaction) -> None:
 async def main():
     """Main function to start the bot."""
     global translate_client
-    translate_client = DictaTranslateAPI()
+    translate_client = DictaAPI()
     await start_bot(bot, settings.discord_token)
 
 if __name__ == "__main__":
