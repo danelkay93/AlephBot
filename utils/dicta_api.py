@@ -14,7 +14,7 @@ DICTA_WS_URL = "wss://translate.loadbalancer.dicta.org.il/api/ws"
 TranslationDirection = Literal["he-en", "en-he"]
 
 TRANSLATION_GENRES: Dict[str, str] = {
-    "modern": "Standard modern translation style",
+    "modern-fancy": "Standard modern translation style",
     "modern-formal": "Formal/professional translation style",
     "modern-colloquial": "Casual/conversational style",
     "biblical": "Biblical/archaic style translation",
@@ -26,7 +26,7 @@ class DictaTranslateAPI:
     """Client for the Dicta Translation WebSocket API"""
     
     TRANSLATION_GENRES = {
-        "modern": "Standard modern translation style",
+        "modern-fancy": "Standard modern translation style",
         "modern-formal": "Formal/professional translation style", 
         "modern-colloquial": "Casual/conversational style",
         "biblical": "Biblical/archaic style translation",
@@ -44,14 +44,14 @@ class DictaTranslateAPI:
         self.ws = None
 
     @retry(
-        stop=stop_after_attempt(3),
+        stop=stop_after_attempt(7),
         wait=wait_exponential(multiplier=1, min=4, max=10)
     )
     async def translate(
         self,
         text: str,
         direction: TranslationDirection,
-        genre: str = "modern",
+        genre: str = "modern-fancy",
         temperature: float = 0
     ) -> str:
         """Translate text using the Dicta Translation API
@@ -81,7 +81,6 @@ class DictaTranslateAPI:
                     "text": text,
                     "direction": direction,
                     "genre": genre,
-                    "style": genre,  # API requires both genre and style
                     "temperature": temperature
                 }
                 request_json = json.dumps(request)
@@ -93,8 +92,6 @@ class DictaTranslateAPI:
                 logger.debug("Received WebSocket message: %r", response)
                 if not response.strip():
                     raise ValueError("Empty response received")
-                    
-                logger.debug("Received WebSocket message: %r", response)
                 
                 try:
                     data = json.loads(response)
