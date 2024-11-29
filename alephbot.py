@@ -146,10 +146,13 @@ async def lemmatize(interaction: discord.Interaction, text: str) -> None:
 class GenreSelect(ui.Select):
     def __init__(self):
         options = [
-            SelectOption(label="Modern", value="modern-fancy", description="Modern Hebrew/English", default=True),
-            SelectOption(label="Biblical", value="biblical", description="Biblical Hebrew"),
-            SelectOption(label="Mishnaic", value="mishnaic", description="Mishnaic Hebrew"),
-            SelectOption(label="Poetry", value="poetry", description="Poetic Hebrew")
+            SelectOption(
+                label=desc.split('/')[0].strip(),
+                value=genre,
+                description=desc,
+                default=(genre == "modern-fancy")
+            )
+            for genre, desc in DictaAPI.TRANSLATION_GENRES.items()
         ]
         super().__init__(placeholder="Select genre...", options=options)
 

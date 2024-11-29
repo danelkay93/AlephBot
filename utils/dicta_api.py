@@ -20,8 +20,19 @@ logger = logging.getLogger(__name__)
 DICTA_WS_URL = "wss://translate.loadbalancer.dicta.org.il/api/ws"
 TranslationDirection = Literal["he-en", "en-he"]
 
+TRANSLATION_GENRES = {
+    "modern-fancy": "Standard modern translation style",
+    "modern-formal": "Formal/professional translation style",
+    "modern-colloquial": "Casual/conversational style",
+    "biblical": "Biblical/archaic style translation",
+    "technical": "Technical/scientific translation style",
+    "legal": "Legal/official document style"
+}
+
 class DictaAPI:
     """Client for Dicta Translation and Nakdan APIs"""
+    
+    TRANSLATION_GENRES = TRANSLATION_GENRES
     
     def __init__(self, timeout: float = DEFAULT_TIMEOUT):
         """Initialize the Dicta Translation API client
