@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Dict, List, Union
 import os
 import httpx
 import logging
@@ -9,6 +9,10 @@ from .models import NakdanResponse, MorphologicalFeatures
 from .hebrew_constants import (
     NAKDAN_BASE_URL, MAX_TEXT_LENGTH, DEFAULT_TIMEOUT,
     HebrewFeatures, ERROR_MESSAGES
+)
+from .nakdan_exceptions import (
+    NakdanAPIError, NakdanConnectionError,
+    NakdanResponseError, NakdanValidationError
 )
 
 # Load API key from environment
@@ -374,14 +378,48 @@ def get_nikud(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX
     except Exception as e:
         return _handle_api_error(e, "adding nikud")
 def _handle_api_error(e: Exception, operation: str) -> NakdanResponse:
-    """Centralized error handling for API operations."""
-    if isinstance(e, httpx.HTTPError):
+    """
+    Centralized error handling for API operations.
+    
+    Args:
+        e: The exception that occurred
+        operation: Description of the operation that failed
+        
+    Returns:
+        NakdanResponse with appropriate error message
+    """
+    if isinstance(e, NakdanAPIError):
+        error_msg = str(e)
+        logger.error(
+            "Nakdan API error while %s: %s", 
+            operation, 
+            error_msg,
+            extra={"details": e.details} if e.details else None,
+            exc_info=True
+        )
+    elif isinstance(e, httpx.HTTPError):
         error_msg = f"Connection error: {str(e)}"
-        logger.error("HTTP error occurred while %s: %s", operation, str(e), exc_info=True)
+        logger.error(
+            "HTTP error occurred while %s: %s",
+            operation,
+            str(e),
+            extra={"status_code": getattr(e.response, 'status_code', None)},
+            exc_info=True
+        )
     elif isinstance(e, KeyError):
         error_msg = f"Invalid API response format: {str(e)}"
-        logger.error("Failed to parse response while %s: %s", operation, str(e), exc_info=True)
+        logger.error(
+            "Failed to parse response while %s: %s",
+            operation,
+            str(e),
+            exc_info=True
+        )
     else:
         error_msg = f"Processing error: {str(e)}"
-        logger.error("Error while %s: %s", operation, str(e), exc_info=True)
+        logger.error(
+            "Error while %s: %s",
+            operation,
+            str(e),
+            exc_info=True
+        )
     return NakdanResponse(text="", error=error_msg)
