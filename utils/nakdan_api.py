@@ -191,7 +191,7 @@ def _call_nakdan_api(text: str, timeout: float = DEFAULT_TIMEOUT, task: str = "n
         url = "https://nakdan-for-morph-analysis.loadbalancer.dicta.org.il/addnikud"
         payload = {
             "task": task,
-            "apiKey": "3ab12a2f-80b3-450d-be66-8eb07748f9d2",
+            "apiKey": NAKDAN_API_KEY,
             "data": text,
             "genre": "modern",
             "freturnfullmorphstr": True,
@@ -248,14 +248,8 @@ def get_lemmas(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MA
         NakdanResponse containing lemmatized text and word analysis
     """
     try:
-        if not text.strip():
-            return NakdanResponse(text="", error=ERROR_MESSAGES["empty_text"])
-        
-        if len(text) > max_length:
-            return NakdanResponse(text="", error=ERROR_MESSAGES["text_too_long"])
-            
-        if not is_hebrew(text):
-            return NakdanResponse(text="", error=ERROR_MESSAGES["non_hebrew"])
+        if error_response := _check_text_requirements(text, max_length):
+            return error_response
 
         data = _call_nakdan_api(text, timeout, task="analyze")
         
@@ -323,14 +317,8 @@ def get_nikud(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX
         NakdanResponse containing either the processed text or error message
     """
     try:
-        if not text.strip():
-            return NakdanResponse(text="", error=ERROR_MESSAGES["empty_text"])
-        
-        if len(text) > max_length:
-            return NakdanResponse(text="", error=ERROR_MESSAGES["text_too_long"])
-            
-        if not is_hebrew(text):
-            return NakdanResponse(text="", error=ERROR_MESSAGES["non_hebrew"])
+        if error_response := _check_text_requirements(text, max_length):
+            return error_response
         
         data = _call_nakdan_api(text, timeout)
 
