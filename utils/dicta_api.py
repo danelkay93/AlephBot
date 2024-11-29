@@ -1,7 +1,7 @@
 """API clients for Dicta services including Translation and Nakdan"""
 import json
 import logging
-from typing import Optional, Literal, Dict, Any
+from typing import Optional, Dict, Any
 import httpx
 import websockets
 from websockets.exceptions import WebSocketException
@@ -13,21 +13,12 @@ from .hebrew_constants import (
     DEFAULT_TIMEOUT, MAX_TEXT_LENGTH, ERROR_MESSAGES,
     NAKDAN_BASE_URL, NAKDAN_API_KEY
 )
+from .translation import TranslationDirection, TRANSLATION_GENRES, TranslationGenre
 
 logger = logging.getLogger(__name__)
 
 # Translation API Constants
 DICTA_WS_URL = "wss://translate.loadbalancer.dicta.org.il/api/ws"
-TranslationDirection = Literal["he-en", "en-he"]
-
-TRANSLATION_GENRES = {
-    "modern-fancy": "Standard modern translation style",
-    "modern-formal": "Formal/professional translation style",
-    "modern-colloquial": "Casual/conversational style",
-    "biblical": "Biblical/archaic style translation",
-    "technical": "Technical/scientific translation style",
-    "legal": "Legal/official document style"
-}
 
 class DictaAPI:
     """Client for Dicta Translation and Nakdan APIs"""

@@ -9,6 +9,7 @@ from utils.logging_config import configure_logging
 from utils.config import settings
 from utils.nakdan_api import analyze_text, get_nikud, get_lemmas
 from utils.dicta_api import DictaAPI
+from utils.translation import TranslationGenre, TRANSLATION_GENRES
 from utils.discord_helpers import (
     handle_command_error, create_hebrew_embed, handle_hebrew_command_error
 )
@@ -148,11 +149,11 @@ class GenreSelect(ui.Select):
         options = [
             SelectOption(
                 label=desc.split('/')[0].strip(),
-                value=genre,
+                value=genre.value,
                 description=desc,
-                default=(genre == "modern-fancy")
+                default=(genre == TranslationGenre.MODERN_FANCY)
             )
-            for genre, desc in DictaAPI.TRANSLATION_GENRES.items()
+            for genre, desc in TRANSLATION_GENRES.items()
         ]
         super().__init__(placeholder="Select genre...", options=options)
 
