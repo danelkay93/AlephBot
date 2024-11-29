@@ -1,38 +1,27 @@
+"""API clients for Dicta services including Translation and Nakdan"""
 import json
-import asyncio
 import logging
-from typing import Optional, Literal, Dict
+from typing import Optional, Literal, Dict, Any
+import httpx
 import websockets
 from websockets.exceptions import WebSocketException
 from tenacity import retry, stop_after_attempt, wait_exponential
+from hebrew import Hebrew
 
-from .hebrew_constants import DEFAULT_TIMEOUT
+from .models import NakdanResponse
+from .hebrew_constants import (
+    DEFAULT_TIMEOUT, MAX_TEXT_LENGTH, ERROR_MESSAGES,
+    NAKDAN_BASE_URL, NAKDAN_API_KEY
+)
 
 logger = logging.getLogger(__name__)
 
+# Translation API Constants
 DICTA_WS_URL = "wss://translate.loadbalancer.dicta.org.il/api/ws"
 TranslationDirection = Literal["he-en", "en-he"]
 
-TRANSLATION_GENRES: Dict[str, str] = {
-    "modern-fancy": "Standard modern translation style",
-    "modern-formal": "Formal/professional translation style",
-    "modern-colloquial": "Casual/conversational style",
-    "biblical": "Biblical/archaic style translation",
-    "technical": "Technical/scientific translation style",
-    "legal": "Legal/official document style"
-}
-
-class DictaTranslateAPI:
-    """Client for the Dicta Translation WebSocket API"""
-    
-    TRANSLATION_GENRES = {
-        "modern-fancy": "Standard modern translation style",
-        "modern-formal": "Formal/professional translation style", 
-        "modern-colloquial": "Casual/conversational style",
-        "biblical": "Biblical/archaic style translation",
-        "technical": "Technical/scientific translation style",
-        "legal": "Legal/official document style"
-    }
+class DictaAPI:
+    """Client for Dicta Translation and Nakdan APIs"""
     
     def __init__(self, timeout: float = DEFAULT_TIMEOUT):
         """Initialize the Dicta Translation API client
