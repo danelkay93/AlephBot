@@ -1,0 +1,7 @@
+pull_request_rules:
+  - name: Automatically merge Dependabot PRs
+    conditions:
+      - author = dependabot[bot]
+    actions:
+      queue:
+      # Or use queue: to use the merge queue
