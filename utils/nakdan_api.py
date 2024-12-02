@@ -95,11 +95,16 @@ def _process_ud_field(word_data: dict) -> None:
 
 def _process_bgu_field(word_data: dict, analysis: MorphData) -> None:
     """Process BGU field for morphological analysis."""
-    if 'BGU' not in word_data:
+    if 'BGU' not in word_data or word_data['BGU'] is None:
         return
         
     try:
-        bgu_lines = word_data['BGU'].strip().split('\n')
+        bgu_text = word_data['BGU']
+        if not isinstance(bgu_text, str):
+            logger.warning("BGU field is not a string: %r", bgu_text)
+            return
+            
+        bgu_lines = bgu_text.strip().split('\n')
         if len(bgu_lines) >= 2:
             headers = bgu_lines[0].split('\t')
             values = bgu_lines[1].split('\t')
