@@ -1,7 +1,8 @@
 import pytest
 from discord.ext.commands import Context
 from unittest.mock import AsyncMock, MagicMock
-from alephbot import vowelize, analyze
+from commands.vowelize import vowelize
+
 
 @pytest.mark.asyncio
 async def test_vowelize_command():

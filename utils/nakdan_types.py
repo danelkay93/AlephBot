@@ -26,5 +26,6 @@ class WordOption(TypedDict):
     word: str
     options: List[Union[str, List[List[str]]]]
     BGU: Optional[str]
+    UD: Optional[str]
 
 NakdanAPIResponse = List[Union[WordOption, str]]

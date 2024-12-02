@@ -1,26 +1,28 @@
-from typing import Any, Optional, Dict, List, Union, cast
-import os
-import httpx
 import logging
-from tenacity import retry, stop_after_attempt, wait_exponential
-from hebrew import Hebrew
+from typing import cast
 
-from .models import NakdanResponse, MorphologicalFeatures
+import httpx
+from deplacy import deplacy
+from spacy_conll import init_parser
+from spacy_conll.parser import ConllParser
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+from hebrew import Hebrew
+from .config import settings
 from .hebrew_constants import (
     NAKDAN_BASE_URL, MAX_TEXT_LENGTH, DEFAULT_TIMEOUT,
-    HebrewFeatures, ERROR_MESSAGES
+    ERROR_MESSAGES
 )
+from .models import NakdanResponse
 from .nakdan_exceptions import (
-    NakdanAPIError, NakdanConnectionError,
-    NakdanResponseError, NakdanValidationError
+    NakdanAPIError, NakdanResponseError
 )
 from .nakdan_types import (
-    NakdanTask, MorphData, WordOption,
-    NakdanAPIResponse
+    NakdanTask, MorphData, NakdanAPIResponse
 )
 
 # Load API key from environment
-NAKDAN_API_KEY = os.getenv('NAKDAN_API_KEY')
+NAKDAN_API_KEY = settings.nakdan_api_key
 if not NAKDAN_API_KEY:
     raise ValueError("NAKDAN_API_KEY environment variable not set")
 
@@ -116,7 +118,17 @@ def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = 
                     analysis['menukad'] = main_word
                 else:
                     analysis['menukad'] = word
-                
+
+                # Use spacy to parse the UD field with the converter for type ID ner/conll
+                if 'UD' in word_data:
+                    try:
+                        nlp = ConllParser(init_parser("lang/he", "spacy"))
+                        doc = nlp.parse_conll_text_as_spacy(word_data['UD'])
+                        deplacy.render(doc)
+                    except Exception as e:
+                        logger.warning("Failed to parse UD field: %s", e)
+
+
                 # Parse the BGU field for morphological analysis
                 if 'BGU' in word_data:
                     try:
@@ -231,11 +243,12 @@ def _call_nakdan_api(
     with httpx.Client(timeout=timeout) as client:
         response = client.post(url, json=payload, headers=headers)
         response.raise_for_status()
-        
-        logger.info("Nakdan API Response - Status: %d | Length: %d bytes | Cache: %s", 
-                   response.status_code,
-                   len(response.content),
-                   response.headers.get('x-gg-cache-status', 'N/A'))
+
+        logger.info("Nakdan API Response - Status: %d | Length: %d bytes | Cache: %s",
+                    response.status_code,
+                    len(response.content),
+                    response.headers.get('x-gg-cache-status', 'N/A'))
+
         # Format response content for better logging
         try:
             response_json = response.json()
@@ -244,6 +257,9 @@ def _call_nakdan_api(
         except Exception as e:
             logger.error("Failed to format response for logging: %s", e)
             logger.debug("Raw Response Content: %r", response.text)
+        else:
+            logger.info("Response Content: %r", response_json)
+
         response_data = response.json()
         
         # Validate response structure

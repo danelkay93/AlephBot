@@ -1,19 +1,15 @@
 """API clients for Dicta services including Translation and Nakdan"""
 import json
 import logging
-from typing import Optional, Dict, Any
-import httpx
-import websockets
-from websockets.exceptions import WebSocketException
-from tenacity import retry, stop_after_attempt, wait_exponential
-from hebrew import Hebrew
 
-from .models import NakdanResponse
+import websockets
+from tenacity import retry, stop_after_attempt, wait_exponential
+from websockets.exceptions import WebSocketException
+
 from .hebrew_constants import (
-    DEFAULT_TIMEOUT, MAX_TEXT_LENGTH, ERROR_MESSAGES,
-    NAKDAN_BASE_URL, NAKDAN_API_KEY
+    DEFAULT_TIMEOUT,
 )
-from .translation import TranslationDirection, TRANSLATION_GENRES, TranslationGenre
+from translation import TranslationDirection, TRANSLATION_GENRES
 
 logger = logging.getLogger(__name__)
 
