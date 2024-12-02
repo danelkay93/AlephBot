@@ -1,11 +1,50 @@
 import discord
+from discord import Color
 from discord.ext import commands
+from hebrew import Hebrew
 
 from alephbot import logger
 from discord_helpers import handle_hebrew_command_error, create_hebrew_embed
-from hebrew_constants import DEFAULT_TIMEOUT, MAX_TEXT_LENGTH, EmbedTitles
+from hebrew_constants import EmbedTitles
+from hebrew_constants import MAX_TEXT_LENGTH, DEFAULT_TIMEOUT
 from hebrew_labels import HebrewLabels
-from nakdan_api import analyze_text
+from models import NakdanResponse
+from nakdan_api import check_text_requirements, call_nakdan_api, handle_api_error
+from nlp import process_word_data
+
+
+def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse:
+    try:
+        if error_response := check_text_requirements(text, max_length):
+            return error_response
+
+        data = call_nakdan_api(text, timeout, task="analyze")
+
+        word_analysis = []
+        vowelized_words = []
+
+        for word_data in data:
+            if isinstance(word_data, dict):
+                vowelized_form, analysis = process_word_data(word_data)
+                vowelized_words.append(vowelized_form)
+                word_analysis.append(analysis)
+            else:
+                word_analysis.append({})
+                vowelized_words.append(str(word_data))
+
+        vowelized_text = ''.join(vowelized_words)
+        hebrew_text = Hebrew(vowelized_text)
+        preserved_text = hebrew_text.normalize().string
+
+        return NakdanResponse(
+            text=preserved_text,
+            word_analysis=word_analysis
+        )
+
+    except Exception as e:
+        return handle_api_error(e, "analyzing text")
+
+
 
 class Analyze(commands.Cog):
     def __init__(self, bot):

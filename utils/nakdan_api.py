@@ -2,9 +2,6 @@ import logging
 from typing import cast
 
 import httpx
-from deplacy import deplacy
-from spacy_conll import init_parser
-from spacy_conll.parser import ConllParser
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from hebrew import Hebrew
@@ -18,11 +15,11 @@ from nakdan_exceptions import (
     NakdanAPIError, NakdanResponseError
 )
 from nakdan_types import (
-    NakdanTask, MorphData, NakdanAPIResponse
+    NakdanTask, NakdanAPIResponse
 )
 import re
 
-
+from nlp import _process_word_data
 
 # Load API key from environment
 NAKDAN_API_KEY = settings.nakdan_api_key
@@ -32,7 +29,7 @@ if not NAKDAN_API_KEY:
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-def _check_text_requirements(text: str, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse | None:
+def check_text_requirements(text: str, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse | None:
     """Checks if text meets basic requirements (non-empty, length, Hebrew chars)."""
     if not text.strip():
         return NakdanResponse(text="", error=ERROR_MESSAGES["empty_text"])
@@ -49,104 +46,6 @@ def sanitize_input(text: str) -> str:
     """Sanitize input text to prevent injection attacks."""
     return re.sub(r'[^\x20-\x7E]', '', text)
 
-def _process_word_parts(word: str) -> MorphData:
-    """Process word parts to extract prefix, suffix and main word."""
-    analysis: MorphData = {
-        'word': word,
-        'prefix': '',
-        'suffix': '',
-        'menukad': '',
-        'lemma': '',
-        'pos': '',
-        'gender': '',
-        'number': '',
-        'person': '',
-        'status': '',
-        'tense': '',
-        'binyan': '',
-        'suf_gender': '',
-        'suf_person': '',
-        'suf_number': ''
-    }
-    
-    word_parts = word.split('|')
-    if len(word_parts) > 1:
-        if word_parts[0]:  # Has prefix
-            analysis['prefix'] = word_parts[0]
-        main_word = word_parts[1]
-        if len(word_parts) > 2:  # Has suffix
-            analysis['suffix'] = word_parts[-1]
-            main_word = '|'.join(word_parts[1:-1])
-        analysis['menukad'] = main_word
-    else:
-        analysis['menukad'] = word
-    
-    return analysis
-
-def _process_ud_field(word_data: dict) -> None:
-    """Process Universal Dependencies field if present."""
-    if 'UD' in word_data:
-        try:
-            nlp = ConllParser(init_parser("lang/he", "spacy"))
-            doc = nlp.parse_conll_text_as_spacy(word_data['UD'])
-            deplacy.render(doc)
-        except Exception as e:
-            logger.warning("Failed to parse UD field: %s", e)
-
-def _process_bgu_field(word_data: dict, analysis: MorphData) -> None:
-    """Process BGU field for morphological analysis."""
-    if 'BGU' not in word_data or word_data['BGU'] is None:
-        return
-        
-    try:
-        bgu_text = word_data['BGU']
-        if not isinstance(bgu_text, str):
-            logger.warning("BGU field is not a string: %r", bgu_text)
-            return
-            
-        bgu_lines = bgu_text.strip().split('\n')
-        if len(bgu_lines) >= 2:
-            headers = bgu_lines[0].split('\t')
-            values = bgu_lines[1].split('\t')
-            bgu_data = dict(zip(headers, values))
-            
-            # Map BGU fields to our analysis
-            analysis.update({
-                'lemma': bgu_data.get('lex', ''),
-                'pos': bgu_data.get('POS', ''),
-                'gender': bgu_data.get('Gender', ''),
-                'number': bgu_data.get('Number', ''),
-                'person': bgu_data.get('Person', ''),
-                'tense': bgu_data.get('Tense', ''),
-                'binyan': bgu_data.get('Binyan', ''),
-                'status': bgu_data.get('Status', '')
-            })
-            
-            if analysis['suffix']:
-                analysis.update({
-                    'suf_gender': bgu_data.get('Suf_Gender', ''),
-                    'suf_person': bgu_data.get('Suf_Person', ''),
-                    'suf_number': bgu_data.get('Suf_Number', '')
-                })
-    except Exception as e:
-        logger.warning("Failed to parse morphological analysis: %s", e)
-
-def _process_word_data(word_data: dict) -> tuple[str, MorphData]:
-    """Process individual word data and return vowelized form and analysis."""
-    word = word_data.get('word', '')
-    options = word_data.get('options', [])
-    
-    # Get vowelized form
-    vowelized_form = word
-    if options and isinstance(options[0], list) and len(options[0]) > 0:
-        vowelized_form = options[0][0] if isinstance(options[0][0], str) else word
-    
-    # Get morphological analysis
-    analysis = _process_word_parts(word)
-    _process_ud_field(word_data)
-    _process_bgu_field(word_data, analysis)
-    
-    return vowelized_form, analysis
 
 def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse:
     """
@@ -161,10 +60,10 @@ def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = 
         NakdanResponse containing analysis results or error message
     """
     try:
-        if error_response := _check_text_requirements(text, max_length):
+        if error_response := check_text_requirements(text, max_length):
             return error_response
 
-        data = _call_nakdan_api(text, timeout, task="analyze")
+        data = call_nakdan_api(text, timeout, task="analyze")
         
         word_analysis = []
         vowelized_words = []
@@ -188,7 +87,7 @@ def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = 
         )
 
     except Exception as e:
-        return _handle_api_error(e, "analyzing text")
+        return handle_api_error(e, "analyzing text")
 
 def is_hebrew(text: str) -> bool:
     """Check if string contains Hebrew characters using the hebrew package."""
@@ -200,7 +99,7 @@ def is_hebrew(text: str) -> bool:
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=4, max=10)
 )
-def _call_nakdan_api(
+def call_nakdan_api(
     text: str,
     timeout: float = DEFAULT_TIMEOUT,
     task: NakdanTask = NakdanTask.NAKDAN
@@ -301,10 +200,10 @@ def get_lemmas(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MA
         NakdanResponse containing lemmatized text and word analysis
     """
     try:
-        if error_response := _check_text_requirements(text, max_length):
+        if error_response := check_text_requirements(text, max_length):
             return error_response
 
-        data = _call_nakdan_api(text, timeout, task="analyze")
+        data = call_nakdan_api(text, timeout, task="analyze")
         
         # Process API response for lemmatization
         lemmatized_words = []
@@ -349,7 +248,7 @@ def get_lemmas(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MA
         )
 
     except Exception as e:
-        return _handle_api_error(e, "getting lemmas")
+        return handle_api_error(e, "getting lemmas")
 
 def get_nikud(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse:
     """
@@ -364,10 +263,10 @@ def get_nikud(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX
         NakdanResponse containing either the processed text or error message
     """
     try:
-        if error_response := _check_text_requirements(text, max_length):
+        if error_response := check_text_requirements(text, max_length):
             return error_response
         
-        data = _call_nakdan_api(text, timeout)
+        data = call_nakdan_api(text, timeout)
 
         # Split original text to preserve spaces
         original_words = text.split()
@@ -426,8 +325,8 @@ def get_nikud(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX
         )
 
     except Exception as e:
-        return _handle_api_error(e, "adding nikud")
-def _handle_api_error(e: Exception, operation: str) -> NakdanResponse:
+        return handle_api_error(e, "adding nikud")
+def handle_api_error(e: Exception, operation: str) -> NakdanResponse:
     """
     Centralized error handling for API operations.
     
