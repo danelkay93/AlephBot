@@ -11,7 +11,6 @@ documentation = "https://example.com/docs"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-discord-py = "^2.0"
 requests = "^2.26"
 pydantic = "^2.6.1"
 toml = "^0.10"
@@ -26,6 +25,13 @@ hebrew = "^0.8.1"
 watchdog = "^6.0.0"
 environs = "^11.2.1"
 websockets = "^14.1"
+spacy = "^3.8.2"
+deplacy = "^2.1.0"
+spacy-conll = "^4.0.1"
+cogwatch = "^3.3.1"
+ezcord = "^0.7.1"
+discord-pretty-help = "^2.0.7"
+py-cord = "^2.6.1"
 
 [build-system]
 requires = ["poetry-core>=1.9.1"]
