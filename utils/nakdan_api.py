@@ -8,18 +8,21 @@ from spacy_conll.parser import ConllParser
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from hebrew import Hebrew
-from .config import settings
-from .hebrew_constants import (
+from config import settings
+from hebrew_constants import (
     NAKDAN_BASE_URL, MAX_TEXT_LENGTH, DEFAULT_TIMEOUT,
     ERROR_MESSAGES
 )
-from .models import NakdanResponse
-from .nakdan_exceptions import (
+from models import NakdanResponse
+from nakdan_exceptions import (
     NakdanAPIError, NakdanResponseError
 )
-from .nakdan_types import (
+from nakdan_types import (
     NakdanTask, MorphData, NakdanAPIResponse
 )
+import re
+
+
 
 # Load API key from environment
 NAKDAN_API_KEY = settings.nakdan_api_key
@@ -41,6 +44,10 @@ def _check_text_requirements(text: str, max_length: int = MAX_TEXT_LENGTH) -> Na
         return NakdanResponse(text="", error=ERROR_MESSAGES["non_hebrew"])
     
     return None
+
+def sanitize_input(text: str) -> str:
+    """Sanitize input text to prevent injection attacks."""
+    return re.sub(r'[^\x20-\x7E]', '', text)
 
 def analyze_text(text: str, timeout: float = DEFAULT_TIMEOUT, max_length: int = MAX_TEXT_LENGTH) -> NakdanResponse:
     """
@@ -229,7 +236,7 @@ def _call_nakdan_api(
         url = f"{NAKDAN_BASE_URL}/api"
         payload = {
             "task": task,
-            "data": text,
+            "data": sanitize_input(text),
             "genre": "modern"
         }
     headers = {
